@@ -18,7 +18,7 @@ func main() {
 	polyBase := 3
 	fpPrecision := 2
 
-	exampleMultiParty(5, keyBits, polyBase, fpPrecision)
+	exampleMultiParty(2, keyBits, polyBase, fpPrecision)
 	// examplePearsonsTestSimulation(2, keyBits, polyBase, fpPrecision, true)
 	// exampleTTestSimulation(2, keyBits, polyBase, fpPrecision, true)
 }
@@ -48,15 +48,15 @@ func exampleMultiParty(numParties int, keyBits int, polyBase int, fpPrecision in
 	// one := pk.EncryptElement(big.NewInt(1))
 	// zero := pk.EncryptElement(big.NewInt(0))
 
-	// bitsa := []*pbc.Element{one, zero, one, one, zero, zero, zero}
-	// bitsb := []*pbc.Element{one, zero, zero, one, zero, zero, zero}
+	// bitsa := []*pbc.Element{zero, zero, one, one, zero, zero, zero, zero, zero, one}
+	// bitsb := []*pbc.Element{one, zero, zero, one, zero, zero, one, one, one, one}
 
 	// bitsLT := mpc.EBitsLessThan(bitsa, bitsb)
 	// d := mpc.DecryptElementMPC(bitsLT, true)
 	// fmt.Printf("BitsLessThan: %d\n", d)
 
 	// bs := mpc.EBitsOR(bitsb)
-	// d := mpc.DecryptElementMPC(bs, false)
+	// d = mpc.DecryptElementMPC(bs, false)
 	// fmt.Printf("BitsOR %d\n", d)
 
 	// fmt.Println("Bit prefix product:")
@@ -77,18 +77,20 @@ func exampleMultiParty(numParties int, keyBits int, polyBase int, fpPrecision in
 	// }
 	// fmt.Println()
 
-	// fmt.Println("Bits Decompose:")
-	// zn := big.NewInt(1020)
-	// decomposed := mpc.EBitsDecompose(pk.EncryptElement(zn), 10, pk.T)
-	// fmt.Print(zn.String() + "_2 = ")
-	// for i := 0; i < len(decomposed); i++ {
-	// 	d := mpc.DecryptElementMPC(decomposed[i], false)
-	// 	fmt.Printf("%d", d)
+	// for {
+	// 	fmt.Println("Bits Decompose:")
+	// 	zn := big.NewInt(newCryptoRandom(pk.T).Int64())
+	// 	decomposed := mpc.EBits(pk.EncryptElement(zn))
+	// 	fmt.Print(zn.String() + "_2 = ")
+	// 	for i := 0; i < len(decomposed); i++ {
+	// 		d := mpc.DecryptElementMPC(decomposed[i], false)
+	// 		fmt.Printf("%d", d)
+	// 	}
+	// 	fmt.Println()
 	// }
-	// fmt.Println()
 
-	a := big.NewInt(500)
-	b := big.NewInt(100)
+	a := big.NewInt(1019)
+	b := big.NewInt(99)
 	Q := big.NewInt(0).Div(a, b)
 	result := divbabydiv(mpc, pk.EncryptElement(a), pk.EncryptElement(b))
 	fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + result.String())
@@ -103,29 +105,49 @@ func exampleMultiParty(numParties int, keyBits int, polyBase int, fpPrecision in
 
 func divbabydiv(mpc *sbst.MPC, a, b *pbc.Element) *big.Int {
 
-	n := 10
+	da := mpc.EBits(a)
+	db := mpc.EBits(b)
 
-	da := mpc.EBitsDecompose(a, n, mpc.Pk.T)
-	db := mpc.EBitsDecompose(b, n, mpc.Pk.T)
-	daprefix := mpc.EBitsPrefixOR(mpc.ReverseBits(da))
-	dbprefix := mpc.EBitsPrefixOR(mpc.ReverseBits(db))
+	// 	fmt.Print(zn.String() + "_2 = ")
+	// 	for i := 0; i < len(decomposed); i++ {
+	// 		d := mpc.DecryptElementMPC(decomposed[i], false)
+	// 		fmt.Printf("%d", d)
+	// 	}
+	// 	fmt.Println()
 
-	// fmt.Println("prefixor a")
-	// for i := 0; i < len(daprefix); i++ {
-	// 	d := mpc.DecryptElementMPC(daprefix[i], false)
-	// 	fmt.Printf("%d", d)
-	// }
-	// fmt.Println()
+	daprefix := mpc.EBitsPreOR(mpc.ReverseBits(da))
+	dbprefix := mpc.EBitsPreOR(mpc.ReverseBits(db))
 
-	// fmt.Println("prefixor b")
-	// for i := 0; i < len(dbprefix); i++ {
-	// 	d := mpc.DecryptElementMPC(dbprefix[i], false)
-	// 	fmt.Printf("%d", d)
-	// }
-	// fmt.Println()
+	fmt.Print("a_2 = ")
+	for i := 0; i < len(da); i++ {
+		d := mpc.DecryptElementMPC(da[i], false, true)
+		fmt.Printf("%d", d)
+	}
+	fmt.Println()
+
+	fmt.Print("b_2 = ")
+	for i := 0; i < len(da); i++ {
+		d := mpc.DecryptElementMPC(db[i], false, true)
+		fmt.Printf("%d", d)
+	}
+	fmt.Println()
 
 	bitlena := mpc.Pk.EncryptElement(big.NewInt(0))
 	bitlenb := mpc.Pk.EncryptElement(big.NewInt(0))
+
+	fmt.Print("PREORa_2 = ")
+	for i := 0; i < len(daprefix); i++ {
+		d := mpc.DecryptElementMPC(daprefix[i], false, true)
+		fmt.Printf("%d", d)
+	}
+	fmt.Println()
+
+	fmt.Print("PREORb_2 = ")
+	for i := 0; i < len(dbprefix); i++ {
+		d := mpc.DecryptElementMPC(dbprefix[i], false, true)
+		fmt.Printf("%d", d)
+	}
+	fmt.Println()
 
 	// sum the prefix
 	for i := 0; i < len(daprefix); i++ {
@@ -134,46 +156,57 @@ func divbabydiv(mpc *sbst.MPC, a, b *pbc.Element) *big.Int {
 	}
 
 	diff := mpc.Pk.ESubElements(bitlena, bitlenb)
-	d := mpc.DecryptElementMPC(diff, false)
-	fmt.Printf("Q is on the order of %d bits\n", d)
+	d := mpc.DecryptElementMPC(diff, false, false)
+	fmt.Printf("[DEBUG]: Q is on the order of %d bits\n", d)
 
 	upper := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(0).Add(d, big.NewInt(1)), nil)
 	lower := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(0).Sub(d, big.NewInt(1)), nil)
-	guess := big.NewInt(0).Add(upper, lower)
+	guess := big.NewInt(0).Sub(upper, lower)
 	guess.Div(guess, big.NewInt(2))
 	round := int64(0)
 
+	res := mpc.Pk.EMultCElement(b, big.NewInt(0).Add(lower, guess))
+	resBits := mpc.EBits(res)
+	resBitsPrev := mpc.EBitsZero()
+
 	for {
 
-		if round == d.Int64() || upper.Cmp(lower) < 0 {
+		fmt.Printf("Round#: %d\n", round)
+
+		fmt.Println("Upper bound " + upper.String())
+		fmt.Println("Lower bound " + lower.String())
+		fmt.Println("Guess " + guess.String())
+
+		if round == d.Int64()+1 || upper.Cmp(lower) < 0 {
 			res := big.NewInt(0).Add(upper, lower)
 			return res.Div(res, big.NewInt(2))
 		}
 
-		res := mpc.Pk.ESubElements(a, mpc.Pk.EMultCElement(b, guess, true))
-		resBits := mpc.EBitsDecompose(res, n, mpc.Pk.T)
-		bitLess := mpc.EBitsLessThan(resBits, da)
-		isLess := mpc.DecryptElementMPC(bitLess, true).Int64()
+		res = mpc.Pk.EMultCElement(b, big.NewInt(0).Add(lower, guess))
+		resBits = mpc.EBits(res)
+		la := mpc.EBitsLessThan(resBits, da) // Qb < a (mod T)
+		gb := mpc.EBitsLessThan(resBitsPrev, resBits)
+		bitLess := mpc.Pk.EMultElements(mpc.ReEncryptElementMPC(la), mpc.ReEncryptElementMPC(gb))
+		isLess := mpc.DecryptElementMPC(bitLess, true, true).Int64()
+		resBitsPrev = resBits
 
+		fmt.Printf("bit %d current res is %d\n", isLess, mpc.DecryptElementMPC(res, false, false))
 		if isLess == 1 {
-			lower.Add(lower, guess).Sub(lower, big.NewInt(1))
+			lower = big.NewInt(0).Add(lower, guess)
+			lower.Sub(lower, big.NewInt(1))
 		} else {
-			upper.Add(lower, guess).Add(upper, big.NewInt(1))
+			upper = big.NewInt(0).Add(lower, guess)
+			upper.Add(upper, big.NewInt(1))
 		}
 
-		guess = big.NewInt(0).Add(upper, lower)
+		guess = big.NewInt(0).Sub(upper, lower)
 		guess.Div(guess, big.NewInt(2))
 
 		round++
 
-		est := big.NewInt(0).Add(upper, lower)
+		est := big.NewInt(0).Sub(upper, lower)
 		est.Div(est, big.NewInt(2))
-		fmt.Printf("Round#: %d\n", round)
 		fmt.Println("Current estimate: Q=" + est.String())
-
-		fmt.Println("Upper bound " + upper.String())
-		fmt.Println("Lower bound " + lower.String())
-
 	}
 
 	return nil

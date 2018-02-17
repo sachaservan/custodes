@@ -85,7 +85,7 @@ func (mpc *MPC) DecryptMPC(ct *bgn.Ciphertext) *bgn.Plaintext {
 	return result
 }
 
-func (mpc *MPC) DecryptElementMPC(ct *pbc.Element, l2 bool) *big.Int {
+func (mpc *MPC) DecryptElementMPC(ct *pbc.Element, l2 bool, bit bool) *big.Int {
 
 	var res *PartialDecryptElement
 
@@ -116,10 +116,20 @@ func (mpc *MPC) DecryptElementMPC(ct *pbc.Element, l2 bool) *big.Int {
 		partial.Gsk = partial.Gsk.Mul(partial.Gsk, res.Gsk)
 	}
 
+	// if decrypting a bit, avoid DL alg
+	if bit {
+		zero := ct.NewFieldElement()
+		if partial.Csk.Equals(zero) {
+			return big.NewInt(0)
+		}
+		return big.NewInt(1)
+	}
+
 	result, err := mpc.Pk.RecoverMessageWithDL(partial.Gsk, partial.Csk, l2)
 	if err != nil {
 		panic("unable to decrypt ciphertext")
 	}
+
 	return result
 }
 
@@ -179,8 +189,8 @@ func NewMPCKeyGen(numShares int, keyBits int, polyBase int, deterministic bool) 
 
 	// generate standard key pair
 	var sk *bgn.SecretKey
-	//15010109923
-	pk, sk, err := bgn.NewKeyGen(keyBits, big.NewInt(1021), polyBase, deterministic)
+
+	pk, sk, err := bgn.NewKeyGen(keyBits, big.NewInt(15551), polyBase, deterministic)
 
 	if err != nil {
 		return nil, nil, nil, err

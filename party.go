@@ -27,7 +27,7 @@ type PartialDecryptElement struct {
 }
 
 func (party *Party) getRandomShare() *pbc.Element {
-	r := newCryptoRandom(party.Pk.T)
+	r := newCryptoRandom(party.Pk.N)
 	enc := party.Pk.EncryptElement(r)
 	return enc
 }
