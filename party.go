@@ -1,4 +1,4 @@
-package sbst
+package secstat
 
 import (
 	"bgn"
@@ -76,7 +76,7 @@ func (party *Party) partialDecryptL2(ct *bgn.Ciphertext, pk *bgn.PublicKey) *Par
 	return &PartialDecrypt{csks, gsk, ct.Degree, ct.ScaleFactor}
 }
 
-func (party *Party) PartialDecryptElement(el *pbc.Element) *PartialDecryptElement {
+func (party *Party) PartialDecryptElement(el *pbc.Element) (*pbc.Element, *pbc.Element) {
 
 	gsk := party.Pk.G1.NewFieldElement()
 	gsk = gsk.PowBig(party.Pk.P, party.SkShare)
@@ -84,10 +84,10 @@ func (party *Party) PartialDecryptElement(el *pbc.Element) *PartialDecryptElemen
 	csk := party.Pk.G1.NewFieldElement()
 	csk.PowBig(el, party.SkShare)
 
-	return &PartialDecryptElement{csk, gsk}
+	return csk, gsk
 }
 
-func (party *Party) PartialDecryptElementL2(el *pbc.Element) *PartialDecryptElement {
+func (party *Party) PartialDecryptElementL2(el *pbc.Element) (*pbc.Element, *pbc.Element) {
 
 	gsk := party.Pk.Pairing.NewGT().Pair(party.Pk.P, party.Pk.P)
 	gsk.PowBig(gsk, party.SkShare)
@@ -95,5 +95,5 @@ func (party *Party) PartialDecryptElementL2(el *pbc.Element) *PartialDecryptElem
 	csk := el.NewFieldElement()
 	csk.PowBig(el, party.SkShare)
 
-	return &PartialDecryptElement{csk, gsk}
+	return csk, gsk
 }
