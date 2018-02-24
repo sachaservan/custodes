@@ -329,7 +329,11 @@ func NewMPCKeyGen(numShares int, keyBits int, polyBase int, deterministic bool) 
 	// 32797 --- 16 bits
 	// 16777633 ---25 bits
 
-	pk, sk, err := bgn.NewKeyGen(keyBits, big.NewInt(15551), polyBase, deterministic)
+	pk, sk, err := bgn.NewKeyGen(keyBits, big.NewInt(16777633), polyBase, deterministic)
+
+	gsk := pk.P.NewFieldElement()
+	gsk.PowBig(gsk, sk.Key)
+	pk.ComputeDLCache(gsk)
 
 	if err != nil {
 		return nil, nil, nil, err

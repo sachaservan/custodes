@@ -127,13 +127,15 @@ func newCryptoRandom(max *big.Int) *big.Int {
 
 func printWelcome() {
 	fmt.Println("=====================================")
-	fmt.Println("	  _____ ____   _____ _______")
-	fmt.Println("	 / ____|  _ \\ / ____|__   __|")
-	fmt.Println("	 | (___| |_) | (___    | |")
-	fmt.Println("	 \\___ \\|  _ < \\___ \\   | |")
-	fmt.Println("	 ____) | |_) |____) |  | |")
-	fmt.Println("	|_____/|____/|_____/   |_|")
-	fmt.Println("Secure Blockchain Statistical Testing")
+	fmt.Println(" _    _                    _____          _  ")
+	fmt.Println("| |  | |                  / ____|        | |  ")
+	fmt.Println("| |__| |_   _ _ __   ___ | |     ___ _ __| |_ ")
+	fmt.Println("|  __  | | | | '_ \\ / _ \\| |    / _ \\ '__| __|")
+	fmt.Println("| |  | | |_| | |_) | (_) | |___|  __/ |  | |_ ")
+	fmt.Println("|_|  |_|\\__, | .__/ \\___/ \\_____\\___|_|   \\__|")
+	fmt.Println("	 __/ | |                              ")
+	fmt.Println("	|___/|_|                           ")
+	fmt.Println("Secure Statistical Testing")
 	fmt.Println("=====================================")
 
 }

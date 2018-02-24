@@ -397,18 +397,24 @@ func (mpc *MPC) EBitsPrefixOR(bits []*pbc.Element) []*pbc.Element {
 
 func (mpc *MPC) EBitsPrefixSPK(bits []*spk) []*spk {
 
-	//fmt.Println("[DEBUG]:  EBitsPrefixSPK()")
-
+	// TODO: make this faster
 	degree := len(bits)
-
+	wait := make(chan int, degree)
 	res := make([]*spk, degree)
 	for i := 0; i < degree; i++ {
-		row := make([]*spk, i+1)
-		for k := 0; k <= i; k++ {
-			row[k] = bits[k]
-		}
+		go func(i int) {
+			row := make([]*spk, i+1)
+			for k := 0; k <= i; k++ {
+				row[k] = bits[k]
+			}
 
-		res[i] = mpc.bitsSPK(row)
+			res[i] = mpc.bitsSPK(row)
+			wait <- i
+		}(i)
+	}
+
+	for k := 0; k < degree; k++ {
+		<-wait
 	}
 
 	return res
