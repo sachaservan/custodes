@@ -15,9 +15,9 @@ import (
 )
 
 // Simulation of Pearson's coorelation coefficient
-func examplePearsonsTestSimulation(numParties int, keyBits int, polyBase int, fpPrecision int, debug bool) {
+func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScalarBase int, fpPrecision float64, debug bool) {
 
-	pk, sk, parties, err := secstat.NewMPCKeyGen(numParties, keyBits, polyBase, true)
+	pk, sk, parties, err := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScalarBase, fpPrecision, true)
 	mpc := &secstat.MPC{Parties: parties, Pk: pk, Sk: sk}
 
 	// BEGIN dealer code
@@ -32,8 +32,8 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, polyBase int, fp
 	fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
 
 	// mini test dataset
-	// x = []float64{56, 56, 65, 65, 50, 25, 87, 44, 35}
-	// y = []float64{87, 91, 85, 91, 75, 28, 122, 66, 58}
+	x = []float64{56, 56, 65, 65, 50, 25, 87, 44, 35}
+	y = []float64{87, 91, 85, 91, 75, 28, 122, 66, 58}
 
 	numRows := len(y)
 
@@ -50,8 +50,8 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, polyBase int, fp
 		sumXActual += x[i]
 		sumYActual += y[i]
 
-		plaintextX := bgn.NewPlaintext(big.NewFloat(x[i]), polyBase)
-		plaintextY := bgn.NewPlaintext(big.NewFloat(y[i]), polyBase)
+		plaintextX := pk.NewPlaintext(big.NewFloat(x[i]))
+		plaintextY := pk.NewPlaintext(big.NewFloat(y[i]))
 
 		eX[i] = pk.Encrypt(plaintextX)
 		eY[i] = pk.Encrypt(plaintextY)
@@ -67,7 +67,7 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, polyBase int, fp
 	numRowsFlt := big.NewFloat(float64(numRows))
 
 	// an encryption of zero to be used as initial value
-	enc0 := pk.Encrypt(bgn.NewPlaintext(big.NewFloat(0.0), pk.PolyBase))
+	enc0 := pk.Encrypt(pk.NewPlaintext(big.NewFloat(0.0)))
 
 	// sum of the squares
 	sumX2 := enc0
@@ -158,24 +158,24 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, polyBase int, fp
 	fmt.Println("Runtime: " + endTime.Sub(startTime).String())
 }
 
-func exampleTTestSimulation(numParties int, keyBits int, polyBase int, fpPrecision int, debug bool) {
+func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScaleBase int, fpPrecision float64, debug bool) {
 
-	pk, sk, parties, err := secstat.NewMPCKeyGen(numParties, keyBits, polyBase, true)
+	pk, sk, parties, err := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, true)
 	mpc := &secstat.MPC{Parties: parties, Pk: pk, Sk: sk}
 
 	// Start dealer code
 	//**************************************************************************************
-	// x, y, err := parseLocation("/home/azuka/Desktop/age_sex.csv")
+	x, y, err := parseLocation("/home/azuka/Desktop/age_sex.csv")
 
 	if err != nil {
 		panic(err)
 	}
 
-	//fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
+	fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
 
 	// mini test dataset
-	x := []float64{105.0, 119.0, 100.0, 97.0, 96.0, 101.0, 94.0, 95.0, 98.0}
-	y := []float64{96.0, 99.0, 94.0, 89.0, 96.0, 93.0, 88.0, 105.0, 88.0}
+	// x := []float64{105.0, 119.0, 100.0, 97.0, 96.0, 101.0, 94.0, 95.0, 98.0}
+	// y := []float64{96.0, 99.0, 94.0, 89.0, 96.0, 93.0, 88.0, 105.0, 88.0}
 
 	numRows := len(y)
 
@@ -191,8 +191,8 @@ func exampleTTestSimulation(numParties int, keyBits int, polyBase int, fpPrecisi
 		sumXActual += x[i]
 		sumYActual += y[i]
 
-		plaintextX := bgn.NewPlaintext(big.NewFloat(x[i]), polyBase)
-		plaintextY := bgn.NewPlaintext(big.NewFloat(y[i]), polyBase)
+		plaintextX := pk.NewPlaintext(big.NewFloat(x[i]))
+		plaintextY := pk.NewPlaintext(big.NewFloat(y[i]))
 
 		eX[i] = pk.Encrypt(plaintextX)
 		eY[i] = pk.Encrypt(plaintextY)
@@ -208,7 +208,7 @@ func exampleTTestSimulation(numParties int, keyBits int, polyBase int, fpPrecisi
 	invNumRows := big.NewFloat(1.0 / float64(numRows))
 
 	// encryption of zero for init value
-	e0 := pk.Encrypt(bgn.NewPlaintext(big.NewFloat(0.0), pk.PolyBase))
+	e0 := pk.Encrypt(pk.NewPlaintext(big.NewFloat(0.0)))
 
 	// compute sum x^2 and sum y^2
 	sumX2 := e0
@@ -245,16 +245,17 @@ func exampleTTestSimulation(numParties int, keyBits int, polyBase int, fpPrecisi
 	tb := pk.EAdd(sumY2, pk.AInv(pk.EMultC(pk.EMult(sumY, sumY), invNumRows)))
 
 	bottom := pk.EAdd(ta, tb)
+	fmt.Printf("[TEMP DEBUG]: 0 scalefactor %d\n", bottom.ScaleFactor)
 	bottom = pk.EMultC(bottom, big.NewFloat(1.0/(float64(numRows+numRows-2))))
+	fmt.Printf("[TEMP DEBUG]: 1 scalefactor %d\n", bottom.ScaleFactor)
+
 	bottom = pk.EMultC(bottom, big.NewFloat(2.0/float64(numRows)))
+	fmt.Printf("[TEMP DEBUG]: 2 scalefactor %d\n", bottom.ScaleFactor)
 
 	numerator := mpc.ReEncryptMPC(top)
 
 	fmt.Printf("[TEMP DEBUG] numerator scalefactor: %d\n", numerator.ScaleFactor)
 	fmt.Printf("[TEMP DEBUG] denominator scalefactor: %d\n", bottom.ScaleFactor)
-
-	numerator.ScaleFactor = 0
-	bottom.ScaleFactor = 0
 
 	if debug {
 		// sanity check

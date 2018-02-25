@@ -130,18 +130,62 @@ func (mpc *MPC) solvedBits() ([]*pbc.Element, *pbc.Element, error) {
 	}
 
 	// compute the represented integer
-	val := mpc.Pk.EncryptDeterministic(big.NewInt(0))
-	pow := big.NewInt(1)
-	for i := 0; i < len(bits); i++ {
-		val = mpc.Pk.EAddElements(val, mpc.Pk.EMultCElement(bits[i], pow))
-		pow = pow.Mul(pow, big.NewInt(2))
-	}
+	val := mpc.EBitsToEInteger(bits, false)
 
 	return bits, val, nil
 }
 
-// EBits returns a bit representation of an integer in {0...T}
-func (mpc *MPC) EBits(a *pbc.Element) []*pbc.Element {
+//EBitsExp returns 2^x where x = integer(bits)
+func (mpc *MPC) EBitsExp(bits []*pbc.Element) *pbc.Element {
+
+	base := big.NewInt(2)
+
+	one := mpc.Pk.EncryptDeterministic(big.NewInt(1))
+
+	res := mpc.Pk.EncryptDeterministic(big.NewInt(1))
+
+	for i := 0; i < len(bits); i++ {
+
+		pow := mpc.Pk.EMultCElement(bits[i], base)
+		t1 := mpc.Pk.EMultElements(res, pow)
+
+		t2 := mpc.Pk.EMultElements(mpc.Pk.ESubElements(one, bits[i]), one)
+		t2 = mpc.Pk.EMultElements(mpc.ReEncryptElementMPC(t2), res)
+
+		res = mpc.Pk.EAddL2Elements(t1, t2)
+		res = mpc.ReEncryptElementMPC(res)
+
+		base = base.Exp(base, big.NewInt(2), mpc.Pk.T)
+
+	}
+	return res
+}
+
+//EBitsToEInteger returns the integer (in Zn) representation of an encrypted binary string
+func (mpc *MPC) EBitsToEInteger(bits []*pbc.Element, l2 bool) *pbc.Element {
+
+	if l2 {
+		acc := mpc.Pk.ToDeterministicL2Element(mpc.Pk.EncryptDeterministic(big.NewInt(0)))
+		base := big.NewInt(2)
+		for i := len(bits) - 1; i >= 0; i-- {
+			acc = mpc.Pk.EMultCElementL2(acc, base)
+			acc = mpc.Pk.EAddL2Elements(acc, bits[i])
+		}
+		return acc
+
+	}
+
+	acc := mpc.Pk.EncryptDeterministic(big.NewInt(0))
+	base := big.NewInt(2)
+	for i := len(bits) - 1; i >= 0; i-- {
+		acc = mpc.Pk.EMultCElement(acc, base)
+		acc = mpc.Pk.EAddElements(acc, bits[i])
+	}
+	return acc
+}
+
+// EIntegerToEBits returns a bit representation of an integer in {0...T}
+func (mpc *MPC) EIntegerToEBits(a *pbc.Element) []*pbc.Element {
 
 	//fmt.Println("[DEBUG]:  EBits()")
 

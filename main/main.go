@@ -14,20 +14,41 @@ import (
 func main() {
 	printWelcome()
 
+	// some primes:
+	// 269 --- 8 bits
+	// 1021 --- not square!
+	// 15551 --- not square!
+	// 100043 --- not square!
+	// 16427 --- 15 bits
+	// 32797 --- 16 bits
+	// 16777633 ---25 bits
+
+	numParties := 2
 	keyBits := 35 // length of q1 and q2
+	messageSpace := big.NewInt(1021)
+
 	polyBase := 3
-	fpPrecision := 2
+	fpScaleBase := 2
+	fpPrecision := 0.01
 
 	// examplePearsonsTestSimulation(2, keyBits, polyBase, fpPrecision, true)
-	//exampleTTestSimulation(2, keyBits, polyBase, fpPrecision, true)
-	exampleMultiParty(2, keyBits, polyBase, fpPrecision)
+	// exampleTTestSimulation(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, true)
+	exampleMultiParty(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
 
 }
 
-func exampleMultiParty(numParties int, keyBits int, polyBase int, fpPrecision int) {
+func exampleMultiParty(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScaleBase int, fpPrecision float64) {
 
-	pk, sk, parties, _ := secstat.NewMPCKeyGen(numParties, keyBits, polyBase, true)
+	pk, sk, parties, _ := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, true)
 	mpc := &secstat.MPC{parties, pk, sk}
+
+	// gskG1 := pk.P.NewFieldElement()
+	// gskG1.PowBig(pk.P, sk.Key)
+
+	// gskGT := pk.Pairing.NewGT().Pair(pk.P, pk.P)
+	// gskGT.PowBig(gskGT, sk.Key)
+
+	// pk.ComputeDLCache(gskG1, gskGT)
 
 	// // comp
 	// m1 := bgn.NewPlaintext(big.NewFloat(3.0), pk.PolyBase)
@@ -101,11 +122,11 @@ func exampleMultiParty(numParties int, keyBits int, polyBase int, fpPrecision in
 
 	// }
 
-	a := big.NewInt(4004) // mod 15551
-	b := big.NewInt(15)
+	a := big.NewInt(1020) // mod 15551
+	b := big.NewInt(19)
 	Q := big.NewInt(0).Div(a, b)
 	result := mpc.IntegerDivisionMPC(pk.EncryptElement(a), pk.EncryptElement(b))
-	fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + result.String())
+	fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + mpc.DecryptElementMPC(result, true, false).String())
 	fmt.Println("Actual: " + a.String() + "/" + b.String() + " = " + Q.String())
 
 	// print results

@@ -39,8 +39,9 @@ func (mpc *MPC) ReEncryptElementMPC(el *pbc.Element) *pbc.Element {
 
 func (mpc *MPC) ReEncryptMPC(ct *bgn.Ciphertext) *bgn.Ciphertext {
 
-	var result []*pbc.Element
 	degree := len(ct.Coefficients)
+	result := make([]*pbc.Element, degree)
+
 	c := make(chan int, degree)
 
 	for i, coeff := range ct.Coefficients {
@@ -76,112 +77,157 @@ func (mpc *MPC) requestMPCReEncryption(ct *bgn.Ciphertext) *MPCResponse {
 	return &MPCResponse{randCt, rand}
 }
 
-func (mpc *MPC) IntegerDivisionMPC(a, b *pbc.Element) *big.Int {
+// EModInvertElement computes the modular inverse of a (mod pk.T)
+func (mpc *MPC) EModInvertElement(a *pbc.Element) *pbc.Element {
 
-	da := mpc.EBits(a)
-	db := mpc.EBits(b)
+	for {
+		b := mpc.RandomShare()
+		c := mpc.DecryptElementMPC(mpc.Pk.EMultElements(a, b), true, false)
 
-	daprefix := mpc.EBitsPrefixOR(mpc.ReverseBits(da))
-	dbprefix := mpc.EBitsPrefixOR(mpc.ReverseBits(db))
+		if c.Int64() != 0 {
+			cInv := big.NewInt(0).ModInverse(c, mpc.Pk.T)
+			return mpc.Pk.EMultCElement(b, cInv)
+		}
+	}
+}
+
+func (mpc *MPC) IntegerDivisionMPC(a, b *pbc.Element) *pbc.Element {
+
+	// convert a and b into bits
+	numeratorBits := mpc.EIntegerToEBits(a)
+	denomBits := mpc.EIntegerToEBits(b)
 
 	fmt.Print("a_2 = ")
-	for i := 0; i < len(da); i++ {
-		d := mpc.DecryptElementMPC(da[len(da)-i-1], false, false)
+	for i := 0; i < len(numeratorBits); i++ {
+		d := mpc.DecryptElementMPC(numeratorBits[len(numeratorBits)-i-1], false, false)
 		fmt.Printf("%d", d)
 	}
 	fmt.Println("_2")
 
 	fmt.Print("b_2 = ")
-	for i := 0; i < len(da); i++ {
-		d := mpc.DecryptElementMPC(db[len(da)-i-1], false, false)
+	for i := 0; i < len(denomBits); i++ {
+		d := mpc.DecryptElementMPC(denomBits[len(denomBits)-i-1], false, false)
 		fmt.Printf("%d", d)
 	}
 	fmt.Println("_2")
 
-	bitlena := mpc.Pk.EncryptElement(big.NewInt(0))
-	bitlenb := mpc.Pk.EncryptElement(big.NewInt(0))
+	// get the prefix or of the bits to get the encrypted bitlen (in binary)
+	numeratorPreOR := mpc.EBitsPrefixOR(mpc.ReverseBits(numeratorBits))
+	denomPreOr := mpc.EBitsPrefixOR(mpc.ReverseBits(denomBits))
 
-	fmt.Print("PREORa_2 = ")
-	for i := 0; i < len(daprefix); i++ {
-		d := mpc.DecryptElementMPC(daprefix[i], false, false)
-		fmt.Printf("%d", d)
-	}
-	fmt.Println()
+	// get the bit length as an interger in Zn
 
-	fmt.Print("PREORb_2 = ")
-	for i := 0; i < len(dbprefix); i++ {
-		d := mpc.DecryptElementMPC(dbprefix[i], false, false)
-		fmt.Printf("%d", d)
-	}
-	fmt.Println()
-
-	// sum the prefix
-	for i := 0; i < len(daprefix); i++ {
-		bitlena = mpc.Pk.EAddElements(bitlena, daprefix[i])
-		bitlenb = mpc.Pk.EAddElements(bitlenb, dbprefix[i])
+	// sum the prefix-or results
+	numeratorBitLen := mpc.Pk.EncryptDeterministic(big.NewInt(0))
+	denomBitLen := mpc.Pk.EncryptDeterministic(big.NewInt(0))
+	for i := 0; i < len(numeratorPreOR); i++ {
+		numeratorBitLen = mpc.Pk.EAddElements(numeratorBitLen, numeratorPreOR[i])
+		denomBitLen = mpc.Pk.EAddElements(denomBitLen, denomPreOr[i])
 	}
 
-	diff := mpc.Pk.ESubElements(bitlena, bitlenb)
-	qBits := mpc.DecryptElementMPC(diff, false, false)
-	fmt.Printf("[DEBUG]: Q is on the order of %d bits\n", qBits)
+	diffBits := mpc.EIntegerToEBits(mpc.Pk.ESubElements(numeratorBitLen, denomBitLen))
 
-	upper := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(0).Add(qBits, big.NewInt(1)), nil)
-	lower := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(0).Sub(qBits, big.NewInt(1)), nil)
-	guess := big.NewInt(0)
+	// get the result of 2^diffBits
+	quotientBitLen := mpc.EBitsExp(diffBits)
+
+	fmt.Printf("[DEBUG]: Q is on the order of %d bits\n", mpc.DecryptElementMPC(quotientBitLen, false, false).Int64())
+
+	// inverse of two mod T
+	twoInverse := big.NewInt(0).ModInverse(big.NewInt(2), mpc.Pk.T)
+
+	// add one to the bitlength
+	upperBound := mpc.Pk.EMultCElement(quotientBitLen, big.NewInt(2))
+	// subtract one from the bitlength
+	lowerBound := mpc.Pk.EMultCElement(quotientBitLen, twoInverse)
+
+	// current guess such that Q = (lowerBound + guess)
+	guess := mpc.Pk.EncryptDeterministic(big.NewInt(0))
+
+	// bits rep of lower bound to track overflow mod T
+	resBitsLower := mpc.EBitsZero()
+
+	// constant to avoid re-encrypting every time
+	one := mpc.Pk.EncryptDeterministic(big.NewInt(1))
+	two := mpc.Pk.EncryptDeterministic(big.NewInt(2))
+
+	// can't divide by 2 when guess < 4 since
+	// 3/2 not integer
+	threshold := mpc.EBitsBigEndian(big.NewInt(4), mpc.Pk.T.BitLen())
 
 	round := 0
 
-	resBitsLower := mpc.EBitsZero()
-
 	for {
 
-		fmt.Printf("Round#: %d\n", round)
-
-		fmt.Println("Upper bound " + upper.String())
-		fmt.Println("Lower bound " + lower.String())
-		fmt.Println("Guess " + guess.String())
+		fmt.Printf("[DEBUG]: Round#: %d\n", round)
+		fmt.Printf("[DEBUG]:Upper bound %d\n", mpc.DecryptElementMPC(upperBound, round > 0, false))
+		fmt.Printf("[DEBUG]:Lower bound %d\n", mpc.DecryptElementMPC(lowerBound, round > 0, false))
+		fmt.Printf("[DEBUG]: Guess %d\n", mpc.DecryptElementMPC(guess, round > 0, false))
 
 		if round > mpc.Pk.T.BitLen() {
-			res := big.NewInt(0).Add(upper, lower)
-			return res.Div(res, big.NewInt(2))
+			return lowerBound
 		}
 
-		res := mpc.Pk.EMultCElement(b, big.NewInt(0).Add(lower, guess))
-		resBits := mpc.EBits(res)
-		fmt.Printf("RES%d (15*%d)= ", round, big.NewInt(0).Add(lower, guess))
-		for i := 0; i < len(resBits); i++ {
-			d := mpc.DecryptElementMPC(resBits[len(resBits)-i-1], false, false)
-			fmt.Printf("%d", d)
+		if round > 0 {
+			// still level-1 ciphertexts at the first iteration
+			upperBound = mpc.ReEncryptElementMPC(upperBound)
+			lowerBound = mpc.ReEncryptElementMPC(lowerBound)
+			guess = mpc.ReEncryptElementMPC(guess)
 		}
-		fmt.Println("_2")
 
-		la := mpc.EBitsLessThan(resBits, da)           // Qb (mod T) < a (mod T)
-		gb := mpc.EBitsLessThan(resBitsLower, resBits) // Qb_0 (mod T) > Qb_i (mod T)
+		q := mpc.Pk.EAddElements(lowerBound, guess)
+
+		result := mpc.Pk.EMultElements(b, q)
+		resultBits := mpc.EIntegerToEBits(mpc.ReEncryptElementMPC(result))
+
+		t1 := mpc.EBitsLessThan(resultBits, numeratorBits) // Q*b (mod T) < a (mod T)
+		t2 := mpc.EBitsLessThan(resBitsLower, resultBits)  // Qb_0 (mod T) > Qb_i (mod T)
 
 		if round == 0 {
-			resBitsLower = resBits
+			resBitsLower = resultBits
 		}
 
-		bitLess := mpc.Pk.EMultElements(mpc.ReEncryptElementMPC(la), mpc.ReEncryptElementMPC(gb))
-		isLess := mpc.DecryptElementMPC(bitLess, true, true).Int64()
+		// take the AND of t1 and t2
+		isLess := mpc.ReEncryptElementMPC(mpc.Pk.EMultElements(mpc.ReEncryptElementMPC(t1), mpc.ReEncryptElementMPC(t2)))
+		notLess := mpc.Pk.ESubElements(one, isLess) // take NOT of isLess
 
-		fmt.Printf("la bit: %d  gb bit: %d\n", mpc.DecryptElementMPC(la, true, true).Int64(), mpc.DecryptElementMPC(gb, true, true).Int64())
+		fmt.Printf("[DEBUG]: t1 bit: %d  t2 bit: %d\n", mpc.DecryptElementMPC(t1, true, true).Int64(), mpc.DecryptElementMPC(t2, true, true).Int64())
 
-		if isLess == 1 {
-			lower = big.NewInt(0).Add(lower, guess)
-			resBitsLower = resBits
+		// update the lower bound
+		lowerBound = mpc.Pk.EAddL2Elements(mpc.Pk.EMultElements(lowerBound, notLess), mpc.Pk.EMultElements(q, isLess))
 
-		} else {
-			upper = big.NewInt(0).Add(lower, guess)
+		// update the upper bound
+		upperBound = mpc.Pk.EAddL2Elements(mpc.Pk.EMultElements(upperBound, isLess), mpc.Pk.EMultElements(q, notLess))
+
+		// update the guess to be (upper - lower) / 2
+		guess = mpc.Pk.ESubL2Elements(upperBound, lowerBound)
+		guess = mpc.ReEncryptElementMPC(guess)
+
+		// check if guess below threshold
+		cmp := mpc.EBitsLessThan(mpc.EIntegerToEBits(guess), threshold)
+		cmp = mpc.ReEncryptElementMPC(cmp)
+
+		fmt.Printf("[DEBUG]: guess < threshold: %d\n", mpc.DecryptElementMPC(cmp, false, true).Int64())
+
+		// condition 1: guess = (upperBound - lowerBound)/2
+		guess1 := mpc.Pk.EMultCElement(guess, twoInverse)
+		guess1 = mpc.Pk.EMultElements(guess1, mpc.Pk.ESubElements(one, cmp))
+
+		// condition 2: guess = 2 since we want ceil(3/2)
+		guess2 := mpc.Pk.EMultElements(two, cmp)
+
+		// pick the correct guess
+		guess = mpc.Pk.EAddL2Elements(guess1, guess2)
+
+		if round+2 >= mpc.Pk.T.BitLen() {
+			// on the next to last round, guess is 1 since we want ceil(1/2)
+			guess = mpc.Pk.ToDeterministicL2Element(mpc.Pk.EncryptDeterministic(big.NewInt(1)))
+		} else if round+1 >= mpc.Pk.T.BitLen() {
+			// on the last round, guess is 0
+			guess = mpc.Pk.ToDeterministicL2Element(mpc.Pk.EncryptDeterministic(big.NewInt(0)))
 		}
 
-		guess = big.NewInt(0).Sub(upper, lower)
-		guess.Div(guess, big.NewInt(2))
-
+		// keep chugging
 		round++
-
-		est := big.NewInt(0).Sub(upper, lower)
-		est.Div(est, big.NewInt(2))
 	}
 }
 
@@ -307,33 +353,20 @@ func (mpc *MPC) combineShares(ct *bgn.Ciphertext, shares []*PartialDecrypt, pk *
 	}
 
 	return &bgn.Plaintext{
+		Pk:           mpc.Pk,
 		Coefficients: plaintextCoeffs,
 		Degree:       size,
-		Base:         pk.PolyBase,
 		ScaleFactor:  shares[0].ScaleFactor}
 
 }
 
 // NewMPCKeyGen generates a new public key and n shares of a secret key
-func NewMPCKeyGen(numShares int, keyBits int, polyBase int, deterministic bool) (*bgn.PublicKey, *bgn.SecretKey, []*Party, error) {
+func NewMPCKeyGen(numShares int, keyBits int, messageSpace *big.Int, polyBase int, fpScaleBase int, fpPrecision float64, deterministic bool) (*bgn.PublicKey, *bgn.SecretKey, []*Party, error) {
 
 	// generate standard key pair
 	var sk *bgn.SecretKey
 
-	// some primes:
-	// 269 --- 8 bits
-	// 1021 --- not square!
-	// 15551 --- not square!
-	// 100043 --- not square!
-	// 16427 --- 15 bits
-	// 32797 --- 16 bits
-	// 16777633 ---25 bits
-
-	pk, sk, err := bgn.NewKeyGen(keyBits, big.NewInt(16777633), polyBase, deterministic)
-
-	gsk := pk.P.NewFieldElement()
-	gsk.PowBig(gsk, sk.Key)
-	pk.ComputeDLCache(gsk)
+	pk, sk, err := bgn.NewKeyGen(keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, deterministic)
 
 	if err != nil {
 		return nil, nil, nil, err
