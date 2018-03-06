@@ -42,31 +42,32 @@ func newCryptoRandom(max *big.Int) *big.Int {
 	return rand
 }
 
-func (party *Party) PartialDecrypt(ct *bgn.Ciphertext, pk *bgn.PublicKey) *PartialDecrypt {
+func (party *Party) PartialDecrypt(ct *bgn.Ciphertext) *PartialDecrypt {
 
 	if ct.L2 {
-		return party.partialDecryptL2(ct, pk)
+		return party.partialDecryptL2(ct)
 	}
 
 	csks := make([]*pbc.Element, ct.Degree)
 
-	gsk := pk.G1.NewFieldElement()
-	gsk = gsk.PowBig(party.Pk.P, party.SkShare)
+	gsk := party.Pk.G1.NewFieldElement()
+	gsk.PowBig(party.Pk.P, party.SkShare)
 
 	for i, coeff := range ct.Coefficients {
-		csk := pk.G1.NewFieldElement()
+		csk := party.Pk.G1.NewFieldElement()
 		csks[i] = csk.PowBig(coeff, party.SkShare)
 	}
 
 	return &PartialDecrypt{csks, gsk, ct.Degree, ct.ScaleFactor}
 }
 
-func (party *Party) partialDecryptL2(ct *bgn.Ciphertext, pk *bgn.PublicKey) *PartialDecrypt {
+func (party *Party) partialDecryptL2(ct *bgn.Ciphertext) *PartialDecrypt {
 
 	csks := make([]*pbc.Element, ct.Degree)
+	pk := party.Pk
 
 	gsk := pk.Pairing.NewGT().Pair(pk.P, pk.P)
-	gsk = gsk.PowBig(gsk, party.SkShare)
+	gsk.PowBig(gsk, party.SkShare)
 
 	for i, coeff := range ct.Coefficients {
 		csk := pk.Pairing.NewGT().NewFieldElement()
@@ -79,10 +80,10 @@ func (party *Party) partialDecryptL2(ct *bgn.Ciphertext, pk *bgn.PublicKey) *Par
 func (party *Party) PartialDecryptElement(el *pbc.Element) (*pbc.Element, *pbc.Element) {
 
 	gsk := party.Pk.G1.NewFieldElement()
-	gsk = gsk.PowBig(party.Pk.P, party.SkShare)
+	gsk = gsk.MulBig(party.Pk.P, party.SkShare)
 
 	csk := party.Pk.G1.NewFieldElement()
-	csk.PowBig(el, party.SkShare)
+	csk.MulBig(el, party.SkShare)
 
 	return csk, gsk
 }
@@ -90,10 +91,10 @@ func (party *Party) PartialDecryptElement(el *pbc.Element) (*pbc.Element, *pbc.E
 func (party *Party) PartialDecryptElementL2(el *pbc.Element) (*pbc.Element, *pbc.Element) {
 
 	gsk := party.Pk.Pairing.NewGT().Pair(party.Pk.P, party.Pk.P)
-	gsk.PowBig(gsk, party.SkShare)
+	gsk.MulBig(gsk, party.SkShare)
 
 	csk := el.NewFieldElement()
-	csk.PowBig(el, party.SkShare)
+	csk.MulBig(el, party.SkShare)
 
 	return csk, gsk
 }

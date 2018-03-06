@@ -11,6 +11,7 @@ import (
 	"os"
 	"secstat"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -171,12 +172,11 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 		panic(err)
 	}
 
-	fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
-
 	// mini test dataset
 	// x := []float64{105.0, 119.0, 100.0, 97.0, 96.0, 101.0, 94.0, 95.0, 98.0}
 	// y := []float64{96.0, 99.0, 94.0, 89.0, 96.0, 93.0, 88.0, 105.0, 88.0}
 
+	fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
 	numRows := len(y)
 
 	var eX []*bgn.Ciphertext
@@ -186,17 +186,24 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 
 	sumXActual := 0.0
 	sumYActual := 0.0
+	var wg sync.WaitGroup
 	for i := 0; i < numRows; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
 
-		sumXActual += x[i]
-		sumYActual += y[i]
+			sumXActual += x[i]
+			sumYActual += y[i]
 
-		plaintextX := pk.NewPlaintext(big.NewFloat(x[i]))
-		plaintextY := pk.NewPlaintext(big.NewFloat(y[i]))
+			plaintextX := pk.NewPlaintext(big.NewFloat(x[i]))
+			plaintextY := pk.NewPlaintext(big.NewFloat(y[i]))
 
-		eX[i] = pk.Encrypt(plaintextX)
-		eY[i] = pk.Encrypt(plaintextY)
+			eX[i] = pk.Encrypt(plaintextX)
+			eY[i] = pk.Encrypt(plaintextY)
+		}(i)
 	}
+
+	wg.Wait()
 
 	//**************************************************************************************
 	// End dealer code
@@ -234,8 +241,8 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] MEAN X: %s\n", sk.Decrypt(meanX, pk).String())
-		fmt.Printf("[DEBUG] MEAN Y: %s\n", sk.Decrypt(meanY, pk).String())
+		fmt.Printf("[DEBUG] MEAN X: %s\n", mpc.DecryptMPC(meanX).String())
+		fmt.Printf("[DEBUG] MEAN Y: %s\n", mpc.DecryptMPC(meanY).String())
 	}
 
 	top := pk.EAdd(meanX, pk.AInv(meanY))
@@ -245,17 +252,14 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 	tb := pk.EAdd(sumY2, pk.AInv(pk.EMultC(pk.EMult(sumY, sumY), invNumRows)))
 
 	bottom := pk.EAdd(ta, tb)
-	fmt.Printf("[TEMP DEBUG]: 0 scalefactor %d\n", bottom.ScaleFactor)
-	bottom = pk.EMultC(bottom, big.NewFloat(1.0/(float64(numRows+numRows-2))))
-	fmt.Printf("[TEMP DEBUG]: 1 scalefactor %d\n", bottom.ScaleFactor)
-
-	bottom = pk.EMultC(bottom, big.NewFloat(2.0/float64(numRows)))
-	fmt.Printf("[TEMP DEBUG]: 2 scalefactor %d\n", bottom.ScaleFactor)
+	df := 2.0 / (float64((numRows + numRows - 2) * numRows))
+	bottom = pk.EMultC(bottom, big.NewFloat(df))
 
 	numerator := mpc.ReEncryptMPC(top)
+	denom := mpc.ReEncryptMPC(bottom)
 
-	fmt.Printf("[TEMP DEBUG] numerator scalefactor: %d\n", numerator.ScaleFactor)
-	fmt.Printf("[TEMP DEBUG] denominator scalefactor: %d\n", bottom.ScaleFactor)
+	// fmt.Printf("[TEMP DEBUG] numerator scalefactor: %d\n", numerator.ScaleFactor)
+	// fmt.Printf("[TEMP DEBUG] denominator scalefactor: %d\n", bottom.ScaleFactor)
 
 	if debug {
 		// sanity check
@@ -264,17 +268,23 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] denominator: %s, %f\n", sk.Decrypt(bottom, pk).String(), 1.0/(float64(numRows+numRows-2)))
+		fmt.Printf("[DEBUG] denominator: %s\n", sk.Decrypt(bottom, pk).String())
 	}
 
-	num, _ := mpc.DecryptMPC(numerator).PolyEval().Float64()
-	denom, _ := mpc.DecryptMPC(bottom).PolyEval().Float64()
+	num := mpc.Pk.EPolyEval(numerator)
+	den := mpc.Pk.EPolyEval(denom)
 
-	tstatistic := num / denom
+	q := mpc.IntegerDivisionMPC(den, num) // num < den
+
+	resInv := big.NewFloat(0).SetInt(mpc.DecryptElementMPC(q, false, false))
+	res := big.NewFloat(0).Quo(big.NewFloat(1), resInv)
+	numScalar := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.PolyBase)), big.NewInt(int64(numerator.ScaleFactor)), nil))
+	denomScalar := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.PolyBase)), big.NewInt(int64(bottom.ScaleFactor)), nil))
+	res = res.Mul(res, numScalar).Quo(res, denomScalar)
 
 	endTime := time.Now()
 
-	fmt.Printf("T statistic, p = %f\n", math.Sqrt(tstatistic))
+	fmt.Printf("T statistic, p = %f\n", res.Sqrt(res))
 	log.Println("Runtime: " + endTime.Sub(startTime).String())
 }
 
@@ -283,6 +293,7 @@ func parseLocation(file string) ([]float64, []float64, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
 	defer f.Close()
 
 	csvr := csv.NewReader(f)

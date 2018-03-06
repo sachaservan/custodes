@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"runtime"
 	"secstat"
+	"sync"
+	"time"
 
 	"github.com/Nik-U/pbc"
 )
@@ -22,18 +24,19 @@ func main() {
 	// 16427 --- 15 bits
 	// 32797 --- 16 bits
 	// 16777633 ---25 bits
+	// 1073741833 --- 30 bits
 
 	numParties := 2
-	keyBits := 35 // length of q1 and q2
-	messageSpace := big.NewInt(1021)
+	keyBits := 32 // length of q1 and q2
+	messageSpace := big.NewInt(1073741833)
 
 	polyBase := 3
-	fpScaleBase := 2
-	fpPrecision := 0.01
+	fpScaleBase := 3
+	fpPrecision := 0.0001
 
 	// examplePearsonsTestSimulation(2, keyBits, polyBase, fpPrecision, true)
-	// exampleTTestSimulation(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, true)
-	exampleMultiParty(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
+	exampleTTestSimulation(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, true)
+	//exampleMultiParty(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
 
 }
 
@@ -42,13 +45,13 @@ func exampleMultiParty(numParties int, keyBits int, messageSpace *big.Int, polyB
 	pk, sk, parties, _ := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, true)
 	mpc := &secstat.MPC{parties, pk, sk}
 
-	// gskG1 := pk.P.NewFieldElement()
-	// gskG1.PowBig(pk.P, sk.Key)
+	gskG1 := pk.P.NewFieldElement()
+	gskG1.PowBig(pk.P, sk.Key)
 
-	// gskGT := pk.Pairing.NewGT().Pair(pk.P, pk.P)
-	// gskGT.PowBig(gskGT, sk.Key)
+	gskGT := pk.Pairing.NewGT().Pair(pk.P, pk.P)
+	gskGT.PowBig(gskGT, sk.Key)
 
-	// pk.ComputeDLCache(gskG1, gskGT)
+	pk.ComputeDLCache(gskG1, gskGT)
 
 	// // comp
 	// m1 := bgn.NewPlaintext(big.NewFloat(3.0), pk.PolyBase)
@@ -80,52 +83,68 @@ func exampleMultiParty(numParties int, keyBits int, messageSpace *big.Int, polyB
 	// fmt.Printf("BitsLessThan: %d\n", d)
 
 	mpc.ComputeLangragePolynomialCache(len(bitsb))
-	runtime.GOMAXPROCS(100)
+	runtime.GOMAXPROCS(10000)
 
-	// for {
+	//for {
 
-	// 	// for i := range bitsb {
-	// 	// 	j := newCryptoRandom(big.NewInt(int64(i + 1))).Int64()
-	// 	// 	bitsb[i], bitsb[j] = bitsb[j], bitsb[i]
-	// 	// }
-
-	// 	// for i := 0; i < len(bitsb); i++ {
-	// 	// 	d := mpc.DecryptElementMPC(bitsb[i], false, false)
-	// 	// 	fmt.Printf("%d", d)
-	// 	// }
-	// 	// fmt.Println()
-
-	// 	// bits := mpc.EBitsPrefixOR(bitsb)
-	// 	// for i := 0; i < len(bits); i++ {
-	// 	// 	d := mpc.DecryptElementMPC(bits[i], false, false)
-	// 	// 	fmt.Printf("%d", d)
-	// 	// }
-	// 	// fmt.Println("\n")
-
-	// 	r := newCryptoRandom(pk.T)
-	// 	bits := mpc.EBits(mpc.Pk.EncryptDeterministic(r))
-
-	// 	acc := big.NewInt(0)
-	// 	pow := big.NewInt(2)
-	// 	for i := 0; i < len(bits); i++ {
-	// 		d := mpc.DecryptElementMPC(bits[len(bits)-i-1], false, false)
-	// 		fmt.Printf("%d", d)
-
-	// 		acc.Mul(acc, pow)
-	// 		acc.Add(acc, d)
-	// 	}
-	// 	fmt.Printf("_2 = %d >> %d\n", r, acc)
-
-	// 	if r.Cmp(acc) != 0 {
-	// 		panic("bit decomposition failed!")
-	// 	}
-
+	// for i := range bitsb {
+	// 	j := newCryptoRandom(big.NewInt(int64(i + 1))).Int64()
+	// 	bitsb[i], bitsb[j] = bitsb[j], bitsb[i]
 	// }
 
-	a := big.NewInt(1020) // mod 15551
+	// for i := 0; i < len(bitsb); i++ {
+	// 	d := mpc.DecryptElementMPC(bitsb[i], false, false)
+	// 	fmt.Printf("%d", d)
+	// }
+	// fmt.Println()
+
+	// bits := mpc.EBitsPrefixOR(bitsb)
+	// for i := 0; i < len(bits); i++ {
+	// 	d := mpc.DecryptElementMPC(bits[i], false, false)
+	// 	fmt.Printf("%d", d)
+	// }
+	// fmt.Println("\n")
+
+	var wg sync.WaitGroup
+	wg.Add(100)
+
+	for i := 0; i < 100; i++ {
+
+		r := newCryptoRandom(pk.T)
+
+		go func(r *big.Int) {
+			defer wg.Done()
+			bits := mpc.EIntegerToEBits(mpc.Pk.EncryptDeterministic(r))
+
+			acc := big.NewInt(0)
+			pow := big.NewInt(2)
+
+			for i := 0; i < len(bits); i++ {
+				d := mpc.DecryptElementMPC(bits[len(bits)-i-1], false, false)
+				fmt.Printf("%d", d)
+
+				acc.Mul(acc, pow)
+				acc.Add(acc, d)
+			}
+			fmt.Printf("_2 = %d >> %d\n", r, acc)
+
+			if r.Cmp(big.NewInt(0)) != 0 && r.Cmp(acc) != 0 {
+				panic("bit decomposition failed!")
+			}
+		}(r)
+
+	}
+
+	wg.Wait()
+
+	startTime := time.Now()
+	a := big.NewInt(1001)
 	b := big.NewInt(19)
 	Q := big.NewInt(0).Div(a, b)
 	result := mpc.IntegerDivisionMPC(pk.EncryptElement(a), pk.EncryptElement(b))
+	endTime := time.Now()
+	fmt.Printf("T bits %d, runtime = %s\n", mpc.Pk.T.BitLen(), endTime.Sub(startTime).String())
+	log.Println("Runtime: " + endTime.Sub(startTime).String())
 	fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + mpc.DecryptElementMPC(result, true, false).String())
 	fmt.Println("Actual: " + a.String() + "/" + b.String() + " = " + Q.String())
 
@@ -156,7 +175,7 @@ func printWelcome() {
 	fmt.Println("|_|  |_|\\__, | .__/ \\___/ \\_____\\___|_|   \\__|")
 	fmt.Println("	 __/ | |                              ")
 	fmt.Println("	|___/|_|                           ")
-	fmt.Println("Secure Statistical Testing")
+	fmt.Println("Secure Hypothesis Testing")
 	fmt.Println("=====================================")
 
 }

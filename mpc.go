@@ -4,6 +4,7 @@ import (
 	"bgn"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/Nik-U/pbc"
 )
@@ -31,9 +32,11 @@ type MPCReceptacle struct {
 // ReEncryptElementMPC is a wrapper function that converts an element to a ciphertext
 // and executes the re-encryption protocol
 func (mpc *MPC) ReEncryptElementMPC(el *pbc.Element) *pbc.Element {
+
 	share := mpc.RandomShare()
 	res := mpc.Pk.EAddL2Elements(mpc.Pk.ToDeterministicL2Element(share), el)
-	enc := mpc.Pk.EncryptDeterministic(mpc.DecryptElementMPC(res, true, false))
+	dec := mpc.DecryptElementMPC(res, true, false)
+	enc := mpc.Pk.EncryptDeterministic(dec)
 	return mpc.Pk.ESubElements(enc, share)
 }
 
@@ -42,39 +45,15 @@ func (mpc *MPC) ReEncryptMPC(ct *bgn.Ciphertext) *bgn.Ciphertext {
 	degree := len(ct.Coefficients)
 	result := make([]*pbc.Element, degree)
 
-	c := make(chan int, degree)
-
-	for i, coeff := range ct.Coefficients {
-
-		go func(i int, coeff *pbc.Element) {
-			result[i] = mpc.ReEncryptElementMPC(coeff)
-			c <- i
-		}(i, coeff)
-	}
-
-	// wait for goroutines to finish
 	for i := 0; i < degree; i++ {
-		<-c
+		res := mpc.ReEncryptElementMPC(ct.Coefficients[i])
+		result[i] = res
 	}
 
 	ctL1 := ct.Copy()
 	ctL1.L2 = false
 	ctL1.Coefficients = result
 	return ctL1
-}
-
-func (mpc *MPC) requestMPCReEncryption(ct *bgn.Ciphertext) *MPCResponse {
-
-	randCt := ct.Copy()
-	rand := &bgn.Ciphertext{make([]*pbc.Element, randCt.Degree), randCt.Degree, randCt.ScaleFactor, false}
-
-	for i := 0; i < len(randCt.Coefficients); i++ {
-		randVal := mpc.Pk.EncryptElement(newCryptoRandom(mpc.Pk.N))
-		randCt.Coefficients[i] = mpc.Pk.EAddL2Elements(randCt.Coefficients[i], mpc.Pk.ToDeterministicL2Element(randVal))
-		rand.Coefficients[i] = randVal
-	}
-
-	return &MPCResponse{randCt, rand}
 }
 
 // EModInvertElement computes the modular inverse of a (mod pk.T)
@@ -130,7 +109,7 @@ func (mpc *MPC) IntegerDivisionMPC(a, b *pbc.Element) *pbc.Element {
 	// get the result of 2^diffBits
 	quotientBitLen := mpc.EBitsExp(diffBits)
 
-	fmt.Printf("[DEBUG]: Q is on the order of %d bits\n", mpc.DecryptElementMPC(quotientBitLen, false, false).Int64())
+	//fmt.Printf("[DEBUG]: Q is on the order of %d bits\n", mpc.DecryptElementMPC(quotientBitLen, false, false).Int64())
 
 	// inverse of two mod T
 	twoInverse := big.NewInt(0).ModInverse(big.NewInt(2), mpc.Pk.T)
@@ -190,7 +169,7 @@ func (mpc *MPC) IntegerDivisionMPC(a, b *pbc.Element) *pbc.Element {
 		isLess := mpc.ReEncryptElementMPC(mpc.Pk.EMultElements(mpc.ReEncryptElementMPC(t1), mpc.ReEncryptElementMPC(t2)))
 		notLess := mpc.Pk.ESubElements(one, isLess) // take NOT of isLess
 
-		fmt.Printf("[DEBUG]: t1 bit: %d  t2 bit: %d\n", mpc.DecryptElementMPC(t1, true, true).Int64(), mpc.DecryptElementMPC(t2, true, true).Int64())
+		//fmt.Printf("[DEBUG]: t1 bit: %d  t2 bit: %d\n", mpc.DecryptElementMPC(t1, true, true).Int64(), mpc.DecryptElementMPC(t2, true, true).Int64())
 
 		// update the lower bound
 		lowerBound = mpc.Pk.EAddL2Elements(mpc.Pk.EMultElements(lowerBound, notLess), mpc.Pk.EMultElements(q, isLess))
@@ -206,7 +185,7 @@ func (mpc *MPC) IntegerDivisionMPC(a, b *pbc.Element) *pbc.Element {
 		cmp := mpc.EBitsLessThan(mpc.EIntegerToEBits(guess), threshold)
 		cmp = mpc.ReEncryptElementMPC(cmp)
 
-		fmt.Printf("[DEBUG]: guess < threshold: %d\n", mpc.DecryptElementMPC(cmp, false, true).Int64())
+		//fmt.Printf("[DEBUG]: guess < threshold: %d\n", mpc.DecryptElementMPC(cmp, false, true).Int64())
 
 		// condition 1: guess = (upperBound - lowerBound)/2
 		guess1 := mpc.Pk.EMultCElement(guess, twoInverse)
@@ -235,11 +214,18 @@ func (mpc *MPC) DecryptMPC(ct *bgn.Ciphertext) *bgn.Plaintext {
 
 	partialDecryptions := make([]*PartialDecrypt, len(mpc.Parties))
 
+	var wg sync.WaitGroup
 	for index, party := range mpc.Parties {
-		partialDecryptions[index] = party.PartialDecrypt(ct, mpc.Pk)
+		wg.Add(1)
+		go func(i int, party *Party) {
+			defer wg.Done()
+			partialDecryptions[i] = party.PartialDecrypt(ct)
+		}(index, party)
 	}
 
-	result := mpc.combineShares(ct, partialDecryptions, mpc.Pk)
+	wg.Wait()
+
+	result := mpc.combineShares(ct, partialDecryptions)
 	return result
 }
 
@@ -255,49 +241,46 @@ func (mpc *MPC) DecryptElementMPC(ct *pbc.Element, l2 bool, bit bool) *big.Int {
 	}
 
 	n := len(mpc.Parties)
-	partialCsks := make(chan *pbc.Element, n)
-	partialGsks := make(chan *pbc.Element, n)
 
-	for index, party := range mpc.Parties {
+	var wg sync.WaitGroup
+	partialCsks := make([]*pbc.Element, n)
+	partialGsks := make([]*pbc.Element, n)
 
-		if index == 0 {
-			continue
-		}
+	wg.Add(n - 1)
+	for i := 1; i < n; i++ {
 
-		go func(i int, party *Party) {
+		go func(i int) {
+			defer wg.Done()
 
-			if i > 0 {
+			var cskP, gskP *pbc.Element
+			if l2 {
+				cskP, gskP = mpc.Parties[i].PartialDecryptElementL2(ct)
 
-				var csk, gsk *pbc.Element
-				if l2 {
-					csk, gsk = party.PartialDecryptElementL2(ct)
-
-				} else {
-					csk, gsk = party.PartialDecryptElement(ct)
-				}
-
-				partialCsks <- csk
-				partialGsks <- gsk
+			} else {
+				cskP, gskP = mpc.Parties[i].PartialDecryptElement(ct)
 			}
 
-		}(index, party)
+			partialCsks[i] = cskP
+			partialGsks[i] = gskP
+
+		}(i)
+
 	}
+
+	wg.Wait()
 
 	// wait for goroutines to finish
 	for i := 1; i < n; i++ {
-		cski := <-partialCsks
-		gski := <-partialGsks
-
-		csk.Mul(csk, cski)
-		gsk.Mul(gsk, gski)
+		csk.Mul(csk, partialCsks[i])
+		gsk.Mul(gsk, partialGsks[i])
 	}
 
-	// if decrypting a bit, avoid DL alg
-	if bit {
-		zero := ct.NewFieldElement()
-		if csk.Equals(zero) {
-			return big.NewInt(0)
-		}
+	zero := ct.NewFieldElement()
+	if csk.Equals(zero) {
+		return big.NewInt(0)
+	} else if bit {
+		// if decrypting a bit, avoid DL alg and we
+		// know from previous if statement  it's not 0
 		return big.NewInt(1)
 	}
 
@@ -309,7 +292,7 @@ func (mpc *MPC) DecryptElementMPC(ct *pbc.Element, l2 bool, bit bool) *big.Int {
 	return result
 }
 
-func (mpc *MPC) combineShares(ct *bgn.Ciphertext, shares []*PartialDecrypt, pk *bgn.PublicKey) *bgn.Plaintext {
+func (mpc *MPC) combineShares(ct *bgn.Ciphertext, shares []*PartialDecrypt) *bgn.Plaintext {
 
 	if len(shares) < 1 {
 		panic("Number of shares to combine must be >= 1")
@@ -341,16 +324,23 @@ func (mpc *MPC) combineShares(ct *bgn.Ciphertext, shares []*PartialDecrypt, pk *
 
 	plaintextCoeffs := make([]int64, size)
 
+	var wg sync.WaitGroup
 	for i := 0; i < size; i++ {
+		wg.Add(1)
 
-		pt, err := mpc.Pk.RecoverMessageWithDL(gsk, csks[i], true)
-		if err != nil {
-			panic(err)
-		}
+		go func(i int) {
+			defer wg.Done()
+			pt, err := mpc.Pk.RecoverMessageWithDL(gsk, csks[i], ct.L2)
+			if err != nil {
+				panic(err)
+			}
 
-		plaintextCoeffs[i] = pk.DecodeSign(pt).Int64()
+			plaintextCoeffs[i] = mpc.Pk.DecodeSign(pt).Int64()
+		}(i)
 
 	}
+
+	wg.Wait()
 
 	return &bgn.Plaintext{
 		Pk:           mpc.Pk,
@@ -394,6 +384,13 @@ func NewMPCKeyGen(numShares int, keyBits int, messageSpace *big.Int, polyBase in
 	// have all shares add up to sk
 	last := sum.Sub(sk.Key, sum)
 	parties = append(parties, &Party{last, pk})
+
+	genG1 := pk.P.NewFieldElement()
+	genG1.PowBig(pk.P, sk.Key)
+
+	genGT := pk.Pairing.NewGT().Pair(pk.P, pk.P)
+	genGT.PowBig(genGT, sk.Key)
+	pk.PrecomputeTables(genG1, genGT)
 
 	return pk, sk, parties, err
 }
