@@ -1,7 +1,7 @@
 all: build
 
 run:
-	export HOST_EXTRA_CFLAGS="-D_REENTRANT -lpthread -o2"
+	export HOST_EXTRA_CFLAGS="-o3"
 	go build -o example main/*.go
 	./example
 build: 

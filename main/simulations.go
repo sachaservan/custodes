@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"math/big"
 	"os"
 	"secstat"
@@ -33,8 +32,8 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 	fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
 
 	// mini test dataset
-	x = []float64{56, 56, 65, 65, 50, 25, 87, 44, 35}
-	y = []float64{87, 91, 85, 91, 75, 28, 122, 66, 58}
+	// x = []float64{56, 56, 65, 65, 50, 25, 87, 44, 35}
+	// y = []float64{87, 91, 85, 91, 75, 28, 122, 66, 58}
 
 	numRows := len(y)
 
@@ -139,23 +138,32 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 
 	denominator := covariance
 
+	numerator = mpc.ReEncryptMPC(numerator)
+	denominator = mpc.ReEncryptMPC(denominator)
+
+	numeratorZn := pk.EPolyEval(numerator, 12)
+	denominatorZn := pk.EPolyEval(denominator, 12)
+
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR: %s\n", sk.Decrypt(numerator, pk).String())
-		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", sk.Decrypt(denominator, pk).String())
+		fmt.Printf("[DEBUG] NUMERATOR: %s/3^%d DEGREE: %d\n", sk.DecryptElement(numeratorZn, pk).String(), numerator.ScaleFactor, numerator.Degree)
 	}
 
-	// compute division in the clear
-	num, _ := sk.Decrypt(numerator, pk).PolyEval().Float64()
-	denom, _ := sk.Decrypt(denominator, pk).PolyEval().Float64()
+	if debug {
+		// sanity check
+		fmt.Printf("[DEBUG] DENOMINATOR: %s/3^%d DEGREE: %d\n", sk.DecryptElement(denominatorZn, pk).String(), denominator.ScaleFactor, denominator.Degree)
+	}
 
-	res := num / denom
+	q := mpc.IntegerDivisionRevealMPC(mpc.Pk.EMultCElement(numeratorZn, big.NewInt(100)), denominatorZn) // num < den
 
-	r := math.Sqrt(res)
+	scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.PolyBase)), big.NewInt(int64(numerator.ScaleFactor-denominator.ScaleFactor)), nil))
+
+	res := big.NewFloat(0.0).Quo(big.NewFloat(0.0).SetInt(q), scaleFactor)
+	res.Quo(res, big.NewFloat(100))
 
 	endTime := time.Now()
 
-	fmt.Printf("Pearson's corelation coefficient, r = %f\n", r)
+	fmt.Printf("Pearson's corelation coefficient, r = %s\n", res.Sqrt(res).String())
 	fmt.Println("Runtime: " + endTime.Sub(startTime).String())
 }
 
@@ -261,26 +269,27 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 	// fmt.Printf("[TEMP DEBUG] numerator scalefactor: %d\n", numerator.ScaleFactor)
 	// fmt.Printf("[TEMP DEBUG] denominator scalefactor: %d\n", bottom.ScaleFactor)
 
+	numeratorZn := pk.EPolyEval(numerator, 6)
+	denominatorZn := pk.EPolyEval(denom, 6)
+
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] numerator: %s\n", sk.Decrypt(numerator, pk).String())
+		fmt.Printf("[DEBUG] NUMERATOR (Zn): %s/3^%d\n", sk.DecryptElement(numeratorZn, pk).String(), numerator.ScaleFactor)
+		fmt.Printf("[DEBUG] DENOMINATOR (Zn): %s/3^%d\n", sk.DecryptElement(denominatorZn, pk).String(), numerator.ScaleFactor)
 	}
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] denominator: %s\n", sk.Decrypt(bottom, pk).String())
+		fmt.Printf("[DEBUG] NUMERATOR: %s DEGREE: %d\n", sk.Decrypt(numerator, pk).String(), numerator.Degree)
+		fmt.Printf("[DEBUG] DENOMINATOR: %s DEGREE: %d\n", sk.Decrypt(denom, pk).String(), denom.Degree)
+
 	}
 
-	num := mpc.Pk.EPolyEval(numerator)
-	den := mpc.Pk.EPolyEval(denom)
+	q := mpc.IntegerDivisionRevealMPC(mpc.Pk.EMultCElement(denominatorZn, big.NewInt(100)), numeratorZn) // num < den
 
-	q := mpc.IntegerDivisionMPC(den, num) // num < den
-
-	resInv := big.NewFloat(0).SetInt(mpc.DecryptElementMPC(q, false, false))
-	res := big.NewFloat(0).Quo(big.NewFloat(1), resInv)
-	numScalar := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.PolyBase)), big.NewInt(int64(numerator.ScaleFactor)), nil))
-	denomScalar := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.PolyBase)), big.NewInt(int64(bottom.ScaleFactor)), nil))
-	res = res.Mul(res, numScalar).Quo(res, denomScalar)
+	scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.PolyBase)), big.NewInt(int64(bottom.ScaleFactor-numerator.ScaleFactor)), nil))
+	res := big.NewFloat(0.0).Quo(scaleFactor, big.NewFloat(0.0).SetInt(q))
+	res.Mul(res, big.NewFloat(100))
 
 	endTime := time.Now()
 

@@ -5,9 +5,15 @@ import (
 	"crypto/rand"
 	"log"
 	"math/big"
+	"sync"
 
 	"github.com/Nik-U/pbc"
 )
+
+// precomputed random shares
+var randomShares []*pbc.Element
+var partyShareMutex sync.Mutex
+var partyShareIndex = 0
 
 type Party struct {
 	SkShare *big.Int
@@ -26,7 +32,37 @@ type PartialDecryptElement struct {
 	Gsk *pbc.Element
 }
 
-func (party *Party) getRandomShare() *pbc.Element {
+func (party *Party) precomputeRandomShares(n int) {
+
+	var wg sync.WaitGroup
+	randomShares = make([]*pbc.Element, n)
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			randomShares[i] = party.getRandomShare(false)
+		}(i)
+	}
+
+	wg.Wait()
+
+}
+
+func (party *Party) getRandomShare(precomputed bool) *pbc.Element {
+
+	// try to get a precomputed random share if possible
+	if precomputed {
+		partyShareMutex.Lock()
+		if randomShares != nil && partyShareIndex > len(randomShares) {
+			var share *pbc.Element
+			share = randomShares[partyShareIndex]
+			partyShareIndex++
+			partyShareMutex.Unlock()
+			return share
+		}
+		partyShareMutex.Unlock()
+	}
+
 	r := newCryptoRandom(party.Pk.N)
 	enc := party.Pk.EncryptElement(r)
 	return enc

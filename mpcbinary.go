@@ -12,11 +12,46 @@ import (
 )
 
 var twoInv *big.Int
+
+// pre-computed solved bits for faster on-line phase
+var solvedBits [][]*pbc.Element
+var solvedBitsValue []*pbc.Element
+
+var solvedBitsMutex sync.Mutex
+var nextSolvedBitsIndex = 0
+
+// store lagrange polynomials to avoid recalculations
 var lagrangeCache sync.Map
-var mutex sync.Mutex
+
+// when using fmt.sprintf to get binary of big.int
+var bitsMutex sync.Mutex
+
+func (mpc *MPC) precomputeSolvedBits(n int) {
+	solvedBits = make([][]*pbc.Element, n)
+	solvedBitsValue = make([]*pbc.Element, n)
+
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			bits, d, err := mpc.solvedBits(false)
+			for err != nil {
+				fmt.Println("[DEBUG]: solvedBits() aborted.")
+				bits, d, err = mpc.solvedBits(false)
+			}
+			solvedBits[i] = bits
+			solvedBitsValue[i] = d
+			fmt.Println("Finished generating solved bits")
+
+		}(i)
+	}
+
+	wg.Wait()
+}
 
 // set/propagate/kill wrapper used in the
-// CARRIES protocol
+// EBitsCarries protocol
 type spk struct {
 	s, p, k *pbc.Element
 }
@@ -34,7 +69,7 @@ func (mpc *MPC) RandomShare() *pbc.Element {
 		go func(i int) {
 			defer wg.Done()
 
-			share := mpc.Parties[i].getRandomShare()
+			share := mpc.Parties[i].getRandomShare(true)
 			shares[i] = share
 
 		}(i)
@@ -95,9 +130,21 @@ func (mpc *MPC) RandomBit() (*pbc.Element, error) {
 
 // solvedBits returns a random bit string from {0,1}^n and the corresponding
 // integer value from {0...T}
-func (mpc *MPC) solvedBits() ([]*pbc.Element, *pbc.Element, error) {
+func (mpc *MPC) solvedBits(precomputed bool) ([]*pbc.Element, *pbc.Element, error) {
 
-	// fmt.Println("[DEBUG]:  solvedBits()")
+	if precomputed {
+		solvedBitsMutex.Lock()
+		if precomputed && solvedBits != nil && nextSolvedBitsIndex > len(solvedBits) {
+
+			bits := solvedBits[nextSolvedBitsIndex]
+			val := solvedBitsValue[nextSolvedBitsIndex]
+			nextSolvedBitsIndex++
+			solvedBitsMutex.Unlock()
+
+			return bits, val, nil
+		}
+		solvedBitsMutex.Unlock()
+	}
 
 	n := mpc.Pk.T.BitLen()
 	bits := make([]*pbc.Element, n)
@@ -203,10 +250,10 @@ func (mpc *MPC) EIntegerToEBits(a *pbc.Element) []*pbc.Element {
 	deltaBits := mpc.BitsBigEndian(big.NewInt(0).Sub(maxValue, mpc.Pk.T), n)
 
 	// get solved bits
-	solvedBits, d, err := mpc.solvedBits()
+	solvedBits, d, err := mpc.solvedBits(true)
 	for err != nil {
 		fmt.Println("[DEBUG]: solvedBits() aborted.")
-		solvedBits, d, err = mpc.solvedBits()
+		solvedBits, d, err = mpc.solvedBits(false)
 	}
 
 	// compute a-d where d is the integer returned from solvedbits
@@ -645,7 +692,7 @@ func (mpc *MPC) ReverseBits(bits []*pbc.Element) []*pbc.Element {
 // BitsBigEndian returns the n-bit representation of an integer a
 func (mpc *MPC) BitsBigEndian(a *big.Int, n int) []*big.Int {
 
-	mutex.Lock()
+	bitsMutex.Lock()
 	s := strconv.FormatInt(a.Int64(), 2)
 	bits := make([]*big.Int, len(s))
 	k := 0
@@ -659,7 +706,7 @@ func (mpc *MPC) BitsBigEndian(a *big.Int, n int) []*big.Int {
 		bits = append(bits, big.NewInt(0))
 	}
 
-	mutex.Unlock()
+	bitsMutex.Unlock()
 
 	return bits
 }
@@ -667,7 +714,7 @@ func (mpc *MPC) BitsBigEndian(a *big.Int, n int) []*big.Int {
 // EBitsBigEndian returns the n-bit (encrypted) representation of an integer a
 func (mpc *MPC) EBitsBigEndian(a *big.Int, n int) []*pbc.Element {
 
-	mutex.Lock()
+	bitsMutex.Lock()
 
 	s := strconv.FormatInt(a.Int64(), 2)
 	bits := make([]*pbc.Element, len(s))
@@ -682,7 +729,7 @@ func (mpc *MPC) EBitsBigEndian(a *big.Int, n int) []*pbc.Element {
 		bits = append(bits, zero)
 	}
 
-	mutex.Unlock()
+	bitsMutex.Unlock()
 
 	return bits
 }
@@ -705,7 +752,7 @@ func neg(a *big.Int, p *big.Int) *big.Int {
 	return big.NewInt(0).Sub(p, a)
 }
 
-func (mpc *MPC) ComputeLangragePolynomialCache(n int) {
+func (mpc *MPC) computeLangragePolynomialCache(n int) {
 
 	for i := 0; i < n; i++ {
 		binaryORFunctionInterpolation(i, mpc.Pk.T)
@@ -718,15 +765,15 @@ func binaryORFunctionInterpolation(n int, p *big.Int) []*big.Int {
 
 	// fmt.Println("[DEBUG]: binaryORFunctionInterpolation()")
 
-	// if value, found := lagrangeCache.Load(n); found {
-	// 	if v, ok := value.([]*big.Int); ok {
-	// 		out := make([]*big.Int, n+1)
-	// 		for i := 0; i <= n; i++ {
-	// 			out[i] = big.NewInt(0).Set(v[i])
-	// 		}
-	// 		return out
-	// 	}
-	// }
+	if value, found := lagrangeCache.Load(n); found {
+		if v, ok := value.([]*big.Int); ok {
+			out := make([]*big.Int, n+1)
+			for i := 0; i <= n; i++ {
+				out[i] = big.NewInt(0).Set(v[i])
+			}
+			return out
+		}
+	}
 
 	//fmt.Println("[DEBUG]: binaryORFunctionInterpolation()")
 
