@@ -3,10 +3,10 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
+	"hypocert"
 	"log"
 	"math/big"
 	"runtime"
-	"secstat"
 	"time"
 )
 
@@ -55,7 +55,7 @@ func newCryptoRandom(max *big.Int) *big.Int {
 
 func exampleMultiParty(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScaleBase int, fpPrecision float64) {
 
-	mpc := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
+	mpc := hypocert.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
 	pk := mpc.Pk
 
 	//bitsa := mpc.EBitsBigEndian(big.NewInt(11), pk.T.BitLen())

@@ -3,12 +3,12 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"hypocert"
 	"io"
 	"log"
 	"math/big"
 	"os"
 	"paillier"
-	"secstat"
 	"strconv"
 	"sync"
 	"time"
@@ -17,7 +17,7 @@ import (
 // Simulation of Pearson's coorelation coefficient
 func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScalarBase int, fpPrecision float64, debug bool) {
 
-	mpc := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScalarBase, fpPrecision)
+	mpc := hypocert.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScalarBase, fpPrecision)
 
 	// BEGIN dealer code
 	//**************************************************************************************
@@ -163,7 +163,7 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 
 func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScaleBase int, fpPrecision float64, debug bool) {
 
-	mpc := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
+	mpc := hypocert.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
 
 	// Start dealer code
 	//**************************************************************************************

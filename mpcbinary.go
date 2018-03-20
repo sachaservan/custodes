@@ -1,4 +1,4 @@
-package secstat
+package hypocert
 
 import (
 	"errors"
