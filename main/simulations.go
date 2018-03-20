@@ -1,13 +1,13 @@
 package main
 
 import (
-	"bgn"
 	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
 	"math/big"
 	"os"
+	"paillier"
 	"secstat"
 	"strconv"
 	"sync"
@@ -17,8 +17,7 @@ import (
 // Simulation of Pearson's coorelation coefficient
 func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScalarBase int, fpPrecision float64, debug bool) {
 
-	pk, sk, parties, err := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScalarBase, fpPrecision, true)
-	mpc := &secstat.MPC{Parties: parties, Pk: pk, Sk: sk}
+	mpc := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScalarBase, fpPrecision)
 
 	// BEGIN dealer code
 	//**************************************************************************************
@@ -37,10 +36,10 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 
 	numRows := len(y)
 
-	var eX []*bgn.Ciphertext
-	eX = make([]*bgn.Ciphertext, numRows)
-	var eY []*bgn.Ciphertext
-	eY = make([]*bgn.Ciphertext, numRows)
+	var eX []*paillier.Ciphertext
+	eX = make([]*paillier.Ciphertext, numRows)
+	var eY []*paillier.Ciphertext
+	eY = make([]*paillier.Ciphertext, numRows)
 
 	sumXActual := 0.0
 	sumYActual := 0.0
@@ -50,11 +49,11 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 		sumXActual += x[i]
 		sumYActual += y[i]
 
-		plaintextX := pk.NewPlaintext(big.NewFloat(x[i]))
-		plaintextY := pk.NewPlaintext(big.NewFloat(y[i]))
+		plaintextX := mpc.Pk.NewPlaintext(big.NewFloat(x[i]))
+		plaintextY := mpc.Pk.NewPlaintext(big.NewFloat(y[i]))
 
-		eX[i] = pk.Encrypt(plaintextX)
-		eY[i] = pk.Encrypt(plaintextY)
+		eX[i] = mpc.Pk.Encrypt(plaintextX)
+		eY[i] = mpc.Pk.Encrypt(plaintextY)
 	}
 	//**************************************************************************************
 	// END dealer code
@@ -67,7 +66,7 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 	numRowsFlt := big.NewFloat(float64(numRows))
 
 	// an encryption of zero to be used as initial value
-	enc0 := pk.Encrypt(pk.NewPlaintext(big.NewFloat(0.0)))
+	enc0 := mpc.Pk.Encrypt(mpc.Pk.NewPlaintext(big.NewFloat(0.0)))
 
 	// sum of the squares
 	sumX2 := enc0
@@ -77,90 +76,85 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 
 	// compute sum of squares and sum of rows
 	for i := 0; i < numRows; i++ {
-		sumX = pk.EAdd(sumX, eX[i])
-		sumY = pk.EAdd(sumY, eY[i])
+		sumX = mpc.Pk.EAdd(sumX, eX[i])
+		sumY = mpc.Pk.EAdd(sumY, eY[i])
 
-		x2 := pk.EMult(eX[i], eX[i])
-		sumX2 = pk.EAdd(sumX2, x2)
+		x2 := mpc.EMult(eX[i], eX[i])
+		sumX2 = mpc.Pk.EAdd(sumX2, x2)
 
-		y2 := pk.EMult(eY[i], eY[i])
-		sumY2 = pk.EAdd(sumY2, y2)
+		y2 := mpc.EMult(eY[i], eY[i])
+		sumY2 = mpc.Pk.EAdd(sumY2, y2)
 	}
 
 	// get the mean
-	meanX := pk.EMultC(sumX, invNumRows)
-	meanY := pk.EMultC(sumY, invNumRows)
+	meanX := mpc.Pk.ECFloatMult(sumX, invNumRows)
+	meanY := mpc.Pk.ECFloatMult(sumY, invNumRows)
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] MEAN X: %s, SUM X: %s\n", sk.Decrypt(meanX, pk).String(), sk.Decrypt(sumX, pk).String())
-		fmt.Printf("[DEBUG] MEAN Y: %s, SUM Y: %s\n", sk.Decrypt(meanY, pk).String(), sk.Decrypt(sumY, pk).String())
+		fmt.Printf("[DEBUG] MEAN X: %s, SUM X: %s\n", mpc.DecryptMPC(meanX).String(), mpc.DecryptMPC(sumX).String())
+		fmt.Printf("[DEBUG] MEAN Y: %s, SUM Y: %s\n", mpc.DecryptMPC(meanY).String(), mpc.DecryptMPC(sumY).String())
 	}
 
 	// compute (sum x)^2 and (sum y)^2
-	sum2X := pk.EMult(sumX, sumX)
-	sum2Y := pk.EMult(sumY, sumY)
+	sum2X := mpc.EMult(sumX, sumX)
+	sum2Y := mpc.EMult(sumY, sumY)
 
 	// compute n*(sum x^2) - (sum x)^2
-	varianceX := pk.EAdd(pk.EMultC(sumX2, numRowsFlt), pk.AInv(sum2X))
+	varianceX := mpc.Pk.ESub(mpc.Pk.ECFloatMult(sumX2, numRowsFlt), sum2X)
 
 	// compute n*(sum y^2) - (sum y)^2
-	varianceY := pk.EAdd(pk.EMultC(sumY2, numRowsFlt), pk.AInv(sum2Y))
+	varianceY := mpc.Pk.ESub(mpc.Pk.ECFloatMult(sumY2, numRowsFlt), sum2Y)
 
 	// compute sum xy
 	sumOfProduct := enc0
 	for i := 0; i < numRows; i++ {
-		sumOfProduct = pk.EAdd(sumOfProduct, pk.EMult(eX[i], eY[i]))
+		sumOfProduct = mpc.Pk.EAdd(sumOfProduct, mpc.EMult(eX[i], eY[i]))
 	}
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] VARIANCE X: %s\n", sk.Decrypt(varianceX, pk).String())
-		fmt.Printf("[DEBUG] VARIANCE Y: %s\n", sk.Decrypt(varianceY, pk).String())
+		fmt.Printf("[DEBUG] VARIANCE X: %s\n", mpc.DecryptMPC(varianceX).String())
+		fmt.Printf("[DEBUG] VARIANCE Y: %s\n", mpc.DecryptMPC(varianceY).String())
 	}
 
-	covariance := pk.EMult(mpc.ReEncryptMPC(varianceY), mpc.ReEncryptMPC(varianceX))
+	covariance := mpc.EMult(varianceY, varianceX)
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] SUM OF PRODUCTS: %s\n", sk.Decrypt(sumOfProduct, pk).String())
-		fmt.Printf("[DEBUG] COVARIANCE: %s\n", sk.Decrypt(covariance, pk).String())
+		fmt.Printf("[DEBUG] SUM OF PRODUCTS: %s\n", mpc.DecryptMPC(sumOfProduct).String())
+		fmt.Printf("[DEBUG] COVARIANCE: %s\n", mpc.DecryptMPC(covariance).String())
 
 	}
 
 	// compute (sum x)(sum y)
-	prodSums := pk.EMult(sumY, sumX)
+	prodSums := mpc.EMult(sumY, sumX)
 
 	// compute the numerator^2 = [n*(sum xy) - (sum x)(sum y)]^2
-	numerator := pk.EAdd(pk.EMultC(sumOfProduct, numRowsFlt), pk.AInv(prodSums))
-	numerator = mpc.ReEncryptMPC(numerator)
-	numerator = pk.EMult(numerator, numerator)
-
+	numerator := mpc.Pk.ESub(mpc.Pk.ECFloatMult(sumOfProduct, numRowsFlt), prodSums)
+	numerator = mpc.EMult(numerator, numerator)
 	denominator := covariance
 
-	numerator = mpc.ReEncryptMPC(numerator)
-	denominator = mpc.ReEncryptMPC(denominator)
-
-	numeratorZn := pk.EPolyEval(numerator, 12)
-	denominatorZn := pk.EPolyEval(denominator, 12)
-
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR: %s/3^%d DEGREE: %d\n", sk.DecryptElement(numeratorZn, pk).String(), numerator.ScaleFactor, numerator.Degree)
+		fmt.Printf("[DEBUG] NUMERATOR: %s/3^%d\n", mpc.DecryptMPC(numerator).String(), numerator.FPScaleFactor)
 	}
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] DENOMINATOR: %s/3^%d DEGREE: %d\n", sk.DecryptElement(denominatorZn, pk).String(), denominator.ScaleFactor, denominator.Degree)
+		fmt.Printf("[DEBUG] DENOMINATOR: %s/3^%d\n", mpc.DecryptMPC(denominator).String(), denominator.FPScaleFactor)
 	}
 
-	q := mpc.IntegerDivisionRevealMPC(mpc.Pk.EMultCElement(numeratorZn, big.NewInt(100)), denominatorZn) // num < den
+	numeratorScaleFactor := numerator.FPScaleFactor
+	denominatorScaleFactor := denominator.FPScaleFactor
 
-	scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.PolyBase)), big.NewInt(int64(numerator.ScaleFactor-denominator.ScaleFactor)), nil))
+	numerator.FPScaleFactor = 0
+	denominator.FPScaleFactor = 0
 
-	res := big.NewFloat(0.0).Quo(big.NewFloat(0.0).SetInt(q), scaleFactor)
-	res.Quo(res, big.NewFloat(100))
+	q := mpc.IntegerDivisionRevealMPC(denominator, numerator) // num < den
 
+	scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.FPScaleBase)), big.NewInt(int64(denominatorScaleFactor-numeratorScaleFactor)), nil))
+	res := big.NewFloat(0.0).Quo(scaleFactor, big.NewFloat(0.0).SetInt(q))
 	endTime := time.Now()
 
 	fmt.Printf("Pearson's corelation coefficient, r = %s\n", res.Sqrt(res).String())
@@ -169,8 +163,7 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 
 func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScaleBase int, fpPrecision float64, debug bool) {
 
-	pk, sk, parties, err := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, true)
-	mpc := &secstat.MPC{Parties: parties, Pk: pk, Sk: sk}
+	mpc := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
 
 	// Start dealer code
 	//**************************************************************************************
@@ -187,10 +180,10 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 	fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
 	numRows := len(y)
 
-	var eX []*bgn.Ciphertext
-	eX = make([]*bgn.Ciphertext, numRows)
-	var eY []*bgn.Ciphertext
-	eY = make([]*bgn.Ciphertext, numRows)
+	var eX []*paillier.Ciphertext
+	eX = make([]*paillier.Ciphertext, numRows)
+	var eY []*paillier.Ciphertext
+	eY = make([]*paillier.Ciphertext, numRows)
 
 	sumXActual := 0.0
 	sumYActual := 0.0
@@ -203,11 +196,11 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 			sumXActual += x[i]
 			sumYActual += y[i]
 
-			plaintextX := pk.NewPlaintext(big.NewFloat(x[i]))
-			plaintextY := pk.NewPlaintext(big.NewFloat(y[i]))
+			plaintextX := mpc.Pk.NewPlaintext(big.NewFloat(x[i]))
+			plaintextY := mpc.Pk.NewPlaintext(big.NewFloat(y[i]))
 
-			eX[i] = pk.Encrypt(plaintextX)
-			eY[i] = pk.Encrypt(plaintextY)
+			eX[i] = mpc.Pk.Encrypt(plaintextX)
+			eY[i] = mpc.Pk.Encrypt(plaintextY)
 		}(i)
 	}
 
@@ -219,11 +212,10 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 	fmt.Println("[DEBUG] Finished encrypting dataset")
 
 	startTime := time.Now()
-
 	invNumRows := big.NewFloat(1.0 / float64(numRows))
 
 	// encryption of zero for init value
-	e0 := pk.Encrypt(pk.NewPlaintext(big.NewFloat(0.0)))
+	e0 := mpc.Pk.Encrypt(mpc.Pk.NewPlaintext(big.NewFloat(0.0)))
 
 	// compute sum x^2 and sum y^2
 	sumX2 := e0
@@ -234,18 +226,18 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 	sumY := e0
 
 	for i := 0; i < numRows; i++ {
-		sumX = pk.EAdd(sumX, eX[i])
-		sumY = pk.EAdd(sumY, eY[i])
+		sumX = mpc.Pk.EAdd(sumX, eX[i])
+		sumY = mpc.Pk.EAdd(sumY, eY[i])
 
-		x2 := pk.EMult(eX[i], eX[i])
-		sumX2 = pk.EAdd(sumX2, x2)
+		x2 := mpc.EMult(eX[i], eX[i])
+		sumX2 = mpc.Pk.EAdd(sumX2, x2)
 
-		y2 := pk.EMult(eY[i], eY[i])
-		sumY2 = pk.EAdd(sumY2, y2)
+		y2 := mpc.EMult(eY[i], eY[i])
+		sumY2 = mpc.Pk.EAdd(sumY2, y2)
 	}
 
-	meanX := pk.EMultC(sumX, invNumRows)
-	meanY := pk.EMultC(sumY, invNumRows)
+	meanX := mpc.Pk.ECFloatMult(sumX, invNumRows)
+	meanY := mpc.Pk.ECFloatMult(sumY, invNumRows)
 
 	if debug {
 		// sanity check
@@ -253,48 +245,37 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 		fmt.Printf("[DEBUG] MEAN Y: %s\n", mpc.DecryptMPC(meanY).String())
 	}
 
-	top := pk.EAdd(meanX, pk.AInv(meanY))
-	top = pk.EMult(top, top)
+	numerator := mpc.Pk.ESub(meanX, meanY)
+	numerator = mpc.EMult(numerator, numerator)
 
-	ta := pk.EAdd(sumX2, pk.AInv(pk.EMultC(pk.EMult(sumX, sumX), invNumRows)))
-	tb := pk.EAdd(sumY2, pk.AInv(pk.EMultC(pk.EMult(sumY, sumY), invNumRows)))
+	ta := mpc.Pk.ESub(sumX2, mpc.Pk.ECFloatMult(mpc.EMult(sumX, sumX), invNumRows))
+	tb := mpc.Pk.ESub(sumY2, mpc.Pk.ECFloatMult(mpc.EMult(sumY, sumY), invNumRows))
 
-	bottom := pk.EAdd(ta, tb)
+	denominator := mpc.Pk.EAdd(ta, tb)
 	df := 2.0 / (float64((numRows + numRows - 2) * numRows))
-	bottom = pk.EMultC(bottom, big.NewFloat(df))
-
-	numerator := mpc.ReEncryptMPC(top)
-	denom := mpc.ReEncryptMPC(bottom)
-
-	// fmt.Printf("[TEMP DEBUG] numerator scalefactor: %d\n", numerator.ScaleFactor)
-	// fmt.Printf("[TEMP DEBUG] denominator scalefactor: %d\n", bottom.ScaleFactor)
-
-	numeratorZn := pk.EPolyEval(numerator, 6)
-	denominatorZn := pk.EPolyEval(denom, 6)
+	denominator = mpc.Pk.ECFloatMult(denominator, big.NewFloat(df))
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR (Zn): %s/3^%d\n", sk.DecryptElement(numeratorZn, pk).String(), numerator.ScaleFactor)
-		fmt.Printf("[DEBUG] DENOMINATOR (Zn): %s/3^%d\n", sk.DecryptElement(denominatorZn, pk).String(), numerator.ScaleFactor)
+		fmt.Printf("[DEBUG] NUMERATOR: %s/3^%d\n", mpc.DecryptIntMPC(numerator).String(), numerator.FPScaleFactor)
+		fmt.Printf("[DEBUG] DENOMINATOR: %s/3^%d\n", mpc.DecryptIntMPC(denominator).String(), denominator.FPScaleFactor)
 	}
 
-	if debug {
-		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR: %s DEGREE: %d\n", sk.Decrypt(numerator, pk).String(), numerator.Degree)
-		fmt.Printf("[DEBUG] DENOMINATOR: %s DEGREE: %d\n", sk.Decrypt(denom, pk).String(), denom.Degree)
+	numeratorScaleFactor := numerator.FPScaleFactor
+	denominatorScaleFactor := denominator.FPScaleFactor
 
-	}
+	numerator.FPScaleFactor = 0
+	denominator.FPScaleFactor = 0
 
-	q := mpc.IntegerDivisionRevealMPC(mpc.Pk.EMultCElement(denominatorZn, big.NewInt(100)), numeratorZn) // num < den
+	q := mpc.IntegerDivisionRevealMPC(denominator, numerator) // num < den
 
-	scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.PolyBase)), big.NewInt(int64(bottom.ScaleFactor-numerator.ScaleFactor)), nil))
+	scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.FPScaleBase)), big.NewInt(int64(denominatorScaleFactor-numeratorScaleFactor)), nil))
 	res := big.NewFloat(0.0).Quo(scaleFactor, big.NewFloat(0.0).SetInt(q))
-	res.Mul(res, big.NewFloat(100))
 
 	endTime := time.Now()
 
-	fmt.Printf("T statistic, p = %f\n", res.Sqrt(res))
-	log.Println("Runtime: " + endTime.Sub(startTime).String())
+	fmt.Printf("T STATISTIC, p = %f\n", res.Sqrt(res))
+	log.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
 }
 
 func parseLocation(file string) ([]float64, []float64, error) {

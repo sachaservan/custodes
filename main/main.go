@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
 	"log"
 	"math/big"
@@ -24,12 +25,15 @@ func main() {
 	// 1099511628323 		--- 40 bits
 
 	numParties := 2
-	keyBits := 64 // length of q1 and q2
-	messageSpace := big.NewInt(16777633)
+	keyBits := 128 // length of q1 and q2
+	messageSpace, err := rand.Prime(rand.Reader, 64)
+	if err != nil {
+		panic("unable to generate message space prime!")
+	}
 
 	polyBase := 3
 	fpScaleBase := 3
-	fpPrecision := 0.01
+	fpPrecision := 0.0001
 
 	runtime.GOMAXPROCS(10000)
 
@@ -39,57 +43,47 @@ func main() {
 
 }
 
+// generates a new random number < max
+func newCryptoRandom(max *big.Int) *big.Int {
+	rand, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return rand
+}
+
 func exampleMultiParty(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScaleBase int, fpPrecision float64) {
 
-	pk, sk, parties, _ := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, true)
-	mpc := &secstat.MPC{parties, pk, sk}
+	mpc := secstat.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
+	pk := mpc.Pk
 
-	gskG1 := pk.P.NewFieldElement()
-	gskG1.PowBig(pk.P, sk.Key)
+	//bitsa := mpc.EBitsBigEndian(big.NewInt(11), pk.T.BitLen())
+	// bitsb := mpc.EBitsBigEndian(big.NewInt(10), pk.T.BitLen())
 
-	gskGT := pk.Pairing.NewGT().Pair(pk.P, pk.P)
-	gskGT.PowBig(gskGT, sk.Key)
+	// for {
 
-	pk.ComputeDLCache(gskG1, gskGT)
-	fmt.Println("[DEBUG]: Finished computing DL cache.")
+	// 	ints := big.NewInt(101)
 
-	mpc.PrecomputeData()
-	fmt.Println("[DEBUG]: Finished computing offline data.")
+	// 	bitsa := mpc.EIntegerToEBits(pk.EncryptInt(ints))
+	// 	fmt.Print("bitsa: ")
+	// 	for i := len(bitsa) - 1; i >= 0; i-- {
+	// 		fmt.Print(mpc.DecryptMPC(bitsa[i]).String())
+	// 	}
+	// 	fmt.Println("_2 = " + ints.String())
 
-	// var wg sync.WaitGroup
-	// wg.Add(100)
-
-	// for i := 0; i < 100; i++ {
-
-	// 	go func() {
-	// 		defer wg.Done()
-	// 		startTime := time.Now()
-	// 		a := big.NewInt(16777632)
-	// 		b := big.NewInt(1029)
-	// 		Q := big.NewInt(0).Div(a, b)
-	// 		result := mpc.IntegerDivisionRevealMPC(pk.EncryptElement(a), pk.EncryptElement(b))
-	// 		endTime := time.Now()
-	// 		fmt.Printf("T bits %d, runtime = %s\n", mpc.Pk.T.BitLen(), endTime.Sub(startTime).String())
-	// 		log.Println("Runtime: " + endTime.Sub(startTime).String())
-	// 		//fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + mpc.DecryptElementMPC(result, true, false).String())
-	// 		fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + result.String())
-	// 		fmt.Println("Actual: " + a.String() + "/" + b.String() + " = " + Q.String())
-
-	// 	}()
 	// }
 
-	// wg.Wait()
-
 	startTime := time.Now()
-	a := big.NewInt(12032)
-	b := big.NewInt(1029)
+	a := big.NewInt(121124)
+	b := big.NewInt(12)
 	Q := big.NewInt(0).Div(a, b)
-	result := mpc.IntegerDivisionRevealMPC(pk.EncryptElement(a), pk.EncryptElement(b))
+	result := mpc.IntegerDivisionMPC(pk.EncryptInt(a), pk.EncryptInt(b))
 	endTime := time.Now()
 	fmt.Printf("T bits %d, runtime = %s\n", mpc.Pk.T.BitLen(), endTime.Sub(startTime).String())
 	log.Println("Runtime: " + endTime.Sub(startTime).String())
 	//fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + mpc.DecryptElementMPC(result, true, false).String())
-	fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + result.String())
+	fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + mpc.DecryptMPC(result).String())
 	fmt.Println("Actual: " + a.String() + "/" + b.String() + " = " + Q.String())
 
 }

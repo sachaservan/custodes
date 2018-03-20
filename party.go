@@ -1,46 +1,44 @@
 package secstat
 
 import (
-	"bgn"
 	"crypto/rand"
 	"log"
 	"math/big"
+	"paillier"
 	"sync"
-
-	"github.com/Nik-U/pbc"
 )
 
 // precomputed random shares
-var randomShares []*pbc.Element
+var randomShares []*paillier.Ciphertext
 var partyShareMutex sync.Mutex
 var partyShareIndex = 0
 
 type Party struct {
-	SkShare *big.Int
-	Pk      *bgn.PublicKey
+	Sk *paillier.ThresholdPrivateKey
+	Pk *paillier.PublicKey
 }
 
 type PartialDecrypt struct {
-	Csks        []*pbc.Element
-	Gsk         *pbc.Element
+	Csks        []*paillier.Ciphertext
+	Gsk         *paillier.Ciphertext
 	Degree      int
 	ScaleFactor int
 }
 
 type PartialDecryptElement struct {
-	Csk *pbc.Element
-	Gsk *pbc.Element
+	Csk *paillier.Ciphertext
+	Gsk *paillier.Ciphertext
 }
 
 func (party *Party) precomputeRandomShares(n int) {
 
 	var wg sync.WaitGroup
-	randomShares = make([]*pbc.Element, n)
+	randomShares = make([]*paillier.Ciphertext, n)
 	for i := 0; i < n; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			randomShares[i] = party.getRandomShare(false)
+			randomShares[i] = party.GetRandomShare(false)
 		}(i)
 	}
 
@@ -48,13 +46,21 @@ func (party *Party) precomputeRandomShares(n int) {
 
 }
 
-func (party *Party) getRandomShare(precomputed bool) *pbc.Element {
+func (party *Party) GetRandomMultShare(c *paillier.Ciphertext) (*paillier.Ciphertext, *paillier.Ciphertext) {
+
+	r := newCryptoRandom(party.Pk.N)
+	enc := party.Pk.EncryptInt(r)
+	cMult := party.Pk.ECMult(c, r)
+	return enc, cMult
+}
+
+func (party *Party) GetRandomShare(precomputed bool) *paillier.Ciphertext {
 
 	// try to get a precomputed random share if possible
 	if precomputed {
 		partyShareMutex.Lock()
 		if randomShares != nil && partyShareIndex > len(randomShares) {
-			var share *pbc.Element
+			var share *paillier.Ciphertext
 			share = randomShares[partyShareIndex]
 			partyShareIndex++
 			partyShareMutex.Unlock()
@@ -64,7 +70,7 @@ func (party *Party) getRandomShare(precomputed bool) *pbc.Element {
 	}
 
 	r := newCryptoRandom(party.Pk.N)
-	enc := party.Pk.EncryptElement(r)
+	enc := party.Pk.EncryptInt(r)
 	return enc
 }
 
@@ -78,59 +84,6 @@ func newCryptoRandom(max *big.Int) *big.Int {
 	return rand
 }
 
-func (party *Party) PartialDecrypt(ct *bgn.Ciphertext) *PartialDecrypt {
-
-	if ct.L2 {
-		return party.partialDecryptL2(ct)
-	}
-
-	csks := make([]*pbc.Element, ct.Degree)
-
-	gsk := party.Pk.G1.NewFieldElement()
-	gsk.PowBig(party.Pk.P, party.SkShare)
-
-	for i, coeff := range ct.Coefficients {
-		csk := party.Pk.G1.NewFieldElement()
-		csks[i] = csk.PowBig(coeff, party.SkShare)
-	}
-
-	return &PartialDecrypt{csks, gsk, ct.Degree, ct.ScaleFactor}
-}
-
-func (party *Party) partialDecryptL2(ct *bgn.Ciphertext) *PartialDecrypt {
-
-	csks := make([]*pbc.Element, ct.Degree)
-	pk := party.Pk
-
-	gsk := pk.Pairing.NewGT().Pair(pk.P, pk.P)
-	gsk.PowBig(gsk, party.SkShare)
-
-	for i, coeff := range ct.Coefficients {
-		csk := pk.Pairing.NewGT().NewFieldElement()
-		csks[i] = csk.PowBig(coeff, party.SkShare)
-	}
-
-	return &PartialDecrypt{csks, gsk, ct.Degree, ct.ScaleFactor}
-}
-
-func (party *Party) PartialDecryptElement(el *pbc.Element) (*pbc.Element, *pbc.Element) {
-
-	gsk := party.Pk.G1.NewFieldElement()
-	gsk = gsk.MulBig(party.Pk.P, party.SkShare)
-
-	csk := party.Pk.G1.NewFieldElement()
-	csk.MulBig(el, party.SkShare)
-
-	return csk, gsk
-}
-
-func (party *Party) PartialDecryptElementL2(el *pbc.Element) (*pbc.Element, *pbc.Element) {
-
-	gsk := party.Pk.Pairing.NewGT().Pair(party.Pk.P, party.Pk.P)
-	gsk.MulBig(gsk, party.SkShare)
-
-	csk := el.NewFieldElement()
-	csk.MulBig(el, party.SkShare)
-
-	return csk, gsk
+func (party *Party) PartialDecrypt(ciphertext *paillier.Ciphertext) *paillier.PartialDecryption {
+	return party.Sk.Decrypt(ciphertext.C)
 }
