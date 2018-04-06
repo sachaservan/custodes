@@ -13,34 +13,20 @@ import (
 func main() {
 	printWelcome()
 
-	// Some primes for message space:
-	// 269 					---  8 bits
-	// 1021 				--- 10 bits
-	// 15551 				--- 14 bits
-	// 16427 				--- 15 bits
-	// 32797 				--- 16 bits
-	// 100043 				--- 17 bits
-	// 16777633 			--- 25 bits
-	// 1073741833 			--- 30 bits
-	// 1099511628323 		--- 40 bits
-
-	numParties := 2
-	keyBits := 128 // length of q1 and q2
-	messageSpace, err := rand.Prime(rand.Reader, 64)
-	if err != nil {
-		panic("unable to generate message space prime!")
-	}
-
-	polyBase := 3
-	fpScaleBase := 3
-	fpPrecision := 0.0001
-
 	runtime.GOMAXPROCS(10000)
 
-	//examplePearsonsTestSimulation(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, true)
-	exampleTTestSimulation(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision, true)
-	//exampleMultiParty(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
+	keyGenParams := &hypocert.MPCKeyGenParams{
+		NumParties:       2,
+		Threshold:        2,
+		KeyBits:          512,
+		MessageSpaceBits: 32,
+		SecurityBits:     40,
+		FPPrecisionBits:  10,
+	}
 
+	//examplePearsonsTestSimulation(numParties, keyBits, messageSpaceBits, securityBits, polyBase, fpScaleBase, fpPrecision, true)
+	//exampleTTestSimulation(numParties, keyBits, messageSpaceBits, polyBase, securityBits, fpScaleBase, fpPrecision, true)
+	exampleMultiParty(keyGenParams)
 }
 
 // generates a new random number < max
@@ -53,38 +39,22 @@ func newCryptoRandom(max *big.Int) *big.Int {
 	return rand
 }
 
-func exampleMultiParty(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScaleBase int, fpPrecision float64) {
+func exampleMultiParty(keyGenParams *hypocert.MPCKeyGenParams) {
 
-	mpc := hypocert.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
-	pk := mpc.Pk
+	mpc := hypocert.NewMPCKeyGen(keyGenParams)
 
-	//bitsa := mpc.EBitsBigEndian(big.NewInt(11), pk.T.BitLen())
-	// bitsb := mpc.EBitsBigEndian(big.NewInt(10), pk.T.BitLen())
+	fmt.Println("Generated keys")
 
-	// for {
-
-	// 	ints := big.NewInt(101)
-
-	// 	bitsa := mpc.EIntegerToEBits(pk.EncryptInt(ints))
-	// 	fmt.Print("bitsa: ")
-	// 	for i := len(bitsa) - 1; i >= 0; i-- {
-	// 		fmt.Print(mpc.DecryptMPC(bitsa[i]).String())
-	// 	}
-	// 	fmt.Println("_2 = " + ints.String())
-
-	// }
+	d := big.NewFloat(9.0)
+	c := mpc.Pk.EncryptInt(mpc.Pk.EncodeFixedPoint(d, mpc.Pk.FPPrecBits))
 
 	startTime := time.Now()
-	a := big.NewInt(121124)
-	b := big.NewInt(12)
-	Q := big.NewInt(0).Div(a, b)
-	result := mpc.IntegerDivisionMPC(pk.EncryptInt(a), pk.EncryptInt(b))
+	v := mpc.EFPReciprocal(c)
+
 	endTime := time.Now()
-	fmt.Printf("T bits %d, runtime = %s\n", mpc.Pk.T.BitLen(), endTime.Sub(startTime).String())
 	log.Println("Runtime: " + endTime.Sub(startTime).String())
-	//fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + mpc.DecryptElementMPC(result, true, false).String())
-	fmt.Println("Using div protocol: " + a.String() + "/" + b.String() + " = " + mpc.DecryptMPC(result).String())
-	fmt.Println("Actual: " + a.String() + "/" + b.String() + " = " + Q.String())
+	fmt.Println("Using div protocol: " + mpc.Reveal(v).String())
+	fmt.Println("Actual: " + big.NewFloat(0).Quo(big.NewFloat(1.0), d).String())
 
 }
 

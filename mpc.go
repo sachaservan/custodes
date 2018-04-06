@@ -8,23 +8,24 @@ import (
 	"paillier"
 )
 
+// Constants
+
+var big2Inv *big.Int
+var big2 *big.Int
+var big1 *big.Int
+
 type MPC struct {
 	Parties []*Party
 	Pk      *paillier.PublicKey
 }
 
-type MPCRequest struct {
-	Ct *paillier.Ciphertext
-}
-
-type MPCResponse struct {
-	PartialCt   *paillier.Ciphertext
-	PartialRand *paillier.Ciphertext
-}
-
-type MPCReceptacle struct {
-	Ct   *paillier.Ciphertext
-	Rand *paillier.Ciphertext
+type MPCKeyGenParams struct {
+	NumParties       int
+	Threshold        int // decryption threshold
+	KeyBits          int // at least 512 for Paillier
+	MessageSpaceBits int // used for binary decomposition
+	SecurityBits     int // at least 40 bits
+	FPPrecisionBits  int
 }
 
 // PrecomputeData generates values needed ahead of time
@@ -38,12 +39,9 @@ func (mpc *MPC) PrecomputeData() {
 	expectedNumRounds := 30 * int(math.Pow(float64(bitLen), 2))
 
 	// compute the lagrange poly coeffs ahead of time
-	mpc.computeLangragePolynomialCache(bitLen)
+	mpc.computeBinaryFunctionCache(bitLen)
 
 	fmt.Println("[DEBUG]: Finished computing Lagrange polynomials.")
-
-	// generate enough solved bits for online phase
-	mpc.precomputeSolvedBits(bitLen)
 
 	fmt.Println("[DEBUG]: Finished computing solved bits.")
 
@@ -61,7 +59,7 @@ func (mpc *MPC) EMult(a, b *paillier.Ciphertext) *paillier.Ciphertext {
 	mask, val := mpc.RandomMultShare(a)
 
 	c := mpc.Pk.EAdd(b, mask)
-	rev := mpc.DecryptIntMPC(c)
+	rev := mpc.RevealInt(c)
 	res := mpc.Pk.ECMult(a, rev)
 	res.FPScaleFactor = a.FPScaleFactor + b.FPScaleFactor
 	res = mpc.Pk.ESub(res, val)
@@ -78,14 +76,14 @@ func (mpc *MPC) IntegerDivisionRevealMPC(a, b *paillier.Ciphertext) *big.Int {
 
 	fmt.Print("a_2 = ")
 	for i := 0; i < len(numeratorBits); i++ {
-		d := mpc.DecryptMPC(numeratorBits[len(numeratorBits)-i-1]).Value
+		d := mpc.Reveal(numeratorBits[len(numeratorBits)-i-1]).Value
 		fmt.Printf("%d", d)
 	}
 	fmt.Println("_2")
 
 	fmt.Print("b_2 = ")
 	for i := 0; i < len(denomBits); i++ {
-		d := mpc.DecryptMPC(denomBits[len(denomBits)-i-1]).Value
+		d := mpc.Reveal(denomBits[len(denomBits)-i-1]).Value
 		fmt.Printf("%d", d)
 	}
 	fmt.Println("_2")
@@ -105,9 +103,17 @@ func (mpc *MPC) IntegerDivisionRevealMPC(a, b *paillier.Ciphertext) *big.Int {
 	}
 
 	diffBits := mpc.Pk.ESub(numeratorBitLen, denomBitLen)
-	bitLen := mpc.DecryptMPC(diffBits).Value
+	bitLen := mpc.Reveal(diffBits).Value
 
-	//fmt.Printf("[DEBUG]: Q is on the order of %d bits\n", mpc.DecryptMPC(quotientBitLen, false, false).Int64())
+	precision := big.NewInt(4)
+	scaleBack := big.NewInt(1)
+	if bitLen.Cmp(precision) > 0 {
+		scaleBack = big.NewInt(0).Exp(big.NewInt(2), big.NewInt(0).Sub(bitLen, precision), nil)
+		mpc.Pk.ECMult(b, scaleBack)
+		bitLen = precision
+	}
+
+	//fmt.Printf("[DEBUG]: Q is on the order of %d bits\n", mpc.Reveal(quotientBitLen, false, false).Int64())
 
 	// add one to the bitlength
 	upperBound := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(0).Add(bitLen, big.NewInt(2)), nil)
@@ -116,9 +122,11 @@ func (mpc *MPC) IntegerDivisionRevealMPC(a, b *paillier.Ciphertext) *big.Int {
 
 	// current guess such that Q = (lowerBound + guess)
 	guess := big.NewInt(0)
+	guess.Sub(upperBound, lowerBound)
+	guess.Div(guess.Add(guess, big.NewInt(1)), big.NewInt(2))
 
 	// bits rep of lower bound to track overflow mod T
-	resBitsLower := mpc.EBitsZero()
+	//resBitsLower := mpc.EBitsZero()
 
 	round := 0
 
@@ -129,24 +137,22 @@ func (mpc *MPC) IntegerDivisionRevealMPC(a, b *paillier.Ciphertext) *big.Int {
 		fmt.Printf("[DEBUG]: Lower bound: %d\n", lowerBound)
 		fmt.Printf("[DEBUG]: Current guess: %d\n", guess)
 
-		if int64(round) > bitLen.Int64()+2 {
-			return lowerBound
+		if int64(round) > bitLen.Int64()+1 {
+			return lowerBound.Mul(lowerBound, scaleBack)
 		}
 
 		q := big.NewInt(0).Add(lowerBound, guess)
+		resultBits := mpc.EBitsMult(denomBits, mpc.EBitsBigEndian(q, len(denomBits)))
 
-		result := mpc.Pk.ECMult(b, q)
-		resultBits := mpc.EIntegerToEBits(result)
+		t1 := mpc.EBitsLT(resultBits, numeratorBits) // Q*b (mod T) < a (mod T)
+		// t2 := mpc.EBitsLT(resBitsLower, resultBits)  // Qb_0 (mod T) > Qb_i (mod T)
 
-		t1 := mpc.EBitsLessThan(resultBits, numeratorBits) // Q*b (mod T) < a (mod T)
-		t2 := mpc.EBitsLessThan(resBitsLower, resultBits)  // Qb_0 (mod T) > Qb_i (mod T)
-
-		if round == 0 {
-			resBitsLower = resultBits
-		}
+		// if round == 0 {
+		// 	resBitsLower = resultBits
+		// }
 
 		// take the AND of t1 and t2
-		isLess := mpc.DecryptMPC(mpc.EMult(t1, t2)).Value.Int64()
+		isLess := mpc.Reveal(t1).Value.Int64()
 
 		// update the lower bound
 		if isLess == 1 {
@@ -172,14 +178,14 @@ func (mpc *MPC) IntegerDivisionMPC(a, b *paillier.Ciphertext) *paillier.Cipherte
 
 	fmt.Print("a_2 = ")
 	for i := 0; i < len(numeratorBits); i++ {
-		d := mpc.DecryptMPC(numeratorBits[len(numeratorBits)-i-1]).Value
+		d := mpc.Reveal(numeratorBits[len(numeratorBits)-i-1]).Value
 		fmt.Printf("%d", d)
 	}
 	fmt.Println("_2")
 
 	fmt.Print("b_2 = ")
 	for i := 0; i < len(denomBits); i++ {
-		d := mpc.DecryptMPC(denomBits[len(denomBits)-i-1]).Value
+		d := mpc.Reveal(denomBits[len(denomBits)-i-1]).Value
 		fmt.Printf("%d", d)
 	}
 	fmt.Println("_2")
@@ -202,8 +208,6 @@ func (mpc *MPC) IntegerDivisionMPC(a, b *paillier.Ciphertext) *paillier.Cipherte
 
 	// get the result of 2^diffBits
 	quotientBitLen := mpc.EBitsExp(diffBits)
-
-	//fmt.Printf("[DEBUG]: Q is on the order of %d bits\n", mpc.DecryptMPC(quotientBitLen, false, false).Int64())
 
 	// inverse of two mod T
 	twoInverse := big.NewInt(0).ModInverse(big.NewInt(2), mpc.Pk.N)
@@ -232,11 +236,11 @@ func (mpc *MPC) IntegerDivisionMPC(a, b *paillier.Ciphertext) *paillier.Cipherte
 	for {
 
 		fmt.Printf("[DEBUG]: Round#: %d\n", round)
-		fmt.Printf("[DEBUG]: Upper bound: %d\n", mpc.DecryptMPC(upperBound).Value)
-		fmt.Printf("[DEBUG]: Lower bound: %d\n", mpc.DecryptMPC(lowerBound).Value)
-		fmt.Printf("[DEBUG]: Current guess: %d\n", mpc.DecryptMPC(guess).Value)
+		fmt.Printf("[DEBUG]: Upper bound: %d\n", mpc.Reveal(upperBound).Value)
+		fmt.Printf("[DEBUG]: Lower bound: %d\n", mpc.Reveal(lowerBound).Value)
+		fmt.Printf("[DEBUG]: Current guess: %d\n", mpc.Reveal(guess).Value)
 
-		if round > mpc.Pk.T.BitLen() {
+		if round > 7 {
 			return lowerBound
 		}
 
@@ -245,8 +249,8 @@ func (mpc *MPC) IntegerDivisionMPC(a, b *paillier.Ciphertext) *paillier.Cipherte
 		result := mpc.EMult(b, q)
 		resultBits := mpc.EIntegerToEBits(result)
 
-		t1 := mpc.EBitsLessThan(resultBits, numeratorBits) // Q*b (mod T) < a (mod T)
-		t2 := mpc.EBitsLessThan(resBitsLower, resultBits)  // Qb_0 (mod T) > Qb_i (mod T)
+		t1 := mpc.EBitsLT(resultBits, numeratorBits) // Q*b (mod T) < a (mod T)
+		t2 := mpc.EBitsLT(resBitsLower, resultBits)  // Qb_0 (mod T) > Qb_i (mod T)
 
 		if round == 0 {
 			resBitsLower = resultBits
@@ -256,7 +260,7 @@ func (mpc *MPC) IntegerDivisionMPC(a, b *paillier.Ciphertext) *paillier.Cipherte
 		isLess := mpc.EMult(t1, t2)
 		notLess := mpc.Pk.ESub(one, isLess) // take NOT of isLess
 
-		//fmt.Printf("[DEBUG]: t1 bit: %d  t2 bit: %d\n", mpc.DecryptMPC(t1, true, true).Int64(), mpc.DecryptMPC(t2, true, true).Int64())
+		//fmt.Printf("[DEBUG]: t1 bit: %d  t2 bit: %d\n", mpc.Reveal(t1, true, true).Int64(), mpc.Reveal(t2, true, true).Int64())
 
 		// update the lower bound
 		lowerBound = mpc.Pk.EAdd(mpc.EMult(lowerBound, notLess), mpc.EMult(q, isLess))
@@ -268,9 +272,9 @@ func (mpc *MPC) IntegerDivisionMPC(a, b *paillier.Ciphertext) *paillier.Cipherte
 		guess = mpc.Pk.ESub(upperBound, lowerBound)
 
 		// check if guess below threshold
-		cmp := mpc.EBitsLessThan(mpc.EIntegerToEBits(guess), threshold)
+		cmp := mpc.EBitsLT(mpc.EIntegerToEBits(guess), threshold)
 
-		//fmt.Printf("[DEBUG]: guess < threshold: %d\n", mpc.DecryptMPC(cmp, false, true).Int64())
+		//fmt.Printf("[DEBUG]: guess < threshold: %d\n", mpc.Reveal(cmp, false, true).Int64())
 
 		// condition 1: guess = (upperBound - lowerBound)/2
 		guess1 := mpc.Pk.ECMult(guess, twoInverse)
@@ -296,7 +300,7 @@ func (mpc *MPC) IntegerDivisionMPC(a, b *paillier.Ciphertext) *paillier.Cipherte
 	}
 }
 
-func (mpc *MPC) DecryptIntMPC(ciphertext *paillier.Ciphertext) *big.Int {
+func (mpc *MPC) RevealInt(ciphertext *paillier.Ciphertext) *big.Int {
 
 	partialDecrypts := make([]*paillier.PartialDecryption, len(mpc.Parties))
 	for i := 0; i < len(mpc.Parties); i++ {
@@ -311,7 +315,7 @@ func (mpc *MPC) DecryptIntMPC(ciphertext *paillier.Ciphertext) *big.Int {
 	return val.Value
 }
 
-func (mpc *MPC) DecryptMPC(ciphertext *paillier.Ciphertext) *paillier.Plaintext {
+func (mpc *MPC) Reveal(ciphertext *paillier.Ciphertext) *paillier.Plaintext {
 
 	partialDecrypts := make([]*paillier.PartialDecryption, len(mpc.Parties))
 	for i := 0; i < len(mpc.Parties); i++ {
@@ -323,17 +327,28 @@ func (mpc *MPC) DecryptMPC(ciphertext *paillier.Ciphertext) *paillier.Plaintext 
 		panic(err)
 	}
 
-	val.ScaleFactor = ciphertext.FPScaleFactor
+	val.ScaleFactor = mpc.Pk.FPPrecBits
 	return val
 }
 
-func NewMPCKeyGen(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScaleBase int, fpPrecision float64) *MPC {
-	tkh := paillier.GetThresholdKeyGenerator(keyBits, numParties, numParties, rand.Reader)
+func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
+
+	nu := big.NewInt(0).Binomial(int64(params.NumParties), int64(params.Threshold)).Int64()
+	if int64(params.MessageSpaceBits+params.SecurityBits+params.FPPrecisionBits)+nu >= int64(params.KeyBits*2) {
+		panic("modulus not big enough for given parameters")
+	}
+
+	if params.MessageSpaceBits <= params.FPPrecisionBits {
+		panic("message space is smaller than the precision")
+	}
+
+	tkh := paillier.GetThresholdKeyGenerator(params.KeyBits, params.NumParties, params.Threshold, rand.Reader)
 	tpks, err := tkh.Generate()
 	pk := &tpks[0].PublicKey
-	pk.T = messageSpace
-	pk.FPPrecision = fpPrecision
-	pk.FPScaleBase = fpScaleBase
+	pk.T = big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(params.MessageSpaceBits)), nil)
+	pk.S = params.SecurityBits
+	pk.K = params.MessageSpaceBits
+	pk.FPPrecBits = params.FPPrecisionBits
 
 	if err != nil {
 		panic(err)
@@ -345,6 +360,12 @@ func NewMPCKeyGen(numParties int, keyBits int, messageSpace *big.Int, polyBase i
 	}
 
 	mpc := &MPC{parties, pk}
+
+	// init constants
+
+	big1 = big.NewInt(1)
+	big2 = big.NewInt(2)
+	big2Inv = big.NewInt(0).ModInverse(big2, pk.N)
 
 	return mpc
 }

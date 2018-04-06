@@ -15,9 +15,11 @@ import (
 )
 
 // Simulation of Pearson's coorelation coefficient
-func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScalarBase int, fpPrecision float64, debug bool) {
+func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams) {
 
-	mpc := hypocert.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScalarBase, fpPrecision)
+	mpc := hypocert.NewMPCKeyGen(params)
+
+	debug := true
 
 	// BEGIN dealer code
 	//**************************************************************************************
@@ -92,8 +94,8 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] MEAN X: %s, SUM X: %s\n", mpc.DecryptMPC(meanX).String(), mpc.DecryptMPC(sumX).String())
-		fmt.Printf("[DEBUG] MEAN Y: %s, SUM Y: %s\n", mpc.DecryptMPC(meanY).String(), mpc.DecryptMPC(sumY).String())
+		fmt.Printf("[DEBUG] MEAN X: %s, SUM X: %s\n", mpc.Reveal(meanX).String(), mpc.Reveal(sumX).String())
+		fmt.Printf("[DEBUG] MEAN Y: %s, SUM Y: %s\n", mpc.Reveal(meanY).String(), mpc.Reveal(sumY).String())
 	}
 
 	// compute (sum x)^2 and (sum y)^2
@@ -114,16 +116,16 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] VARIANCE X: %s\n", mpc.DecryptMPC(varianceX).String())
-		fmt.Printf("[DEBUG] VARIANCE Y: %s\n", mpc.DecryptMPC(varianceY).String())
+		fmt.Printf("[DEBUG] VARIANCE X: %s\n", mpc.Reveal(varianceX).String())
+		fmt.Printf("[DEBUG] VARIANCE Y: %s\n", mpc.Reveal(varianceY).String())
 	}
 
 	covariance := mpc.EMult(varianceY, varianceX)
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] SUM OF PRODUCTS: %s\n", mpc.DecryptMPC(sumOfProduct).String())
-		fmt.Printf("[DEBUG] COVARIANCE: %s\n", mpc.DecryptMPC(covariance).String())
+		fmt.Printf("[DEBUG] SUM OF PRODUCTS: %s\n", mpc.Reveal(sumOfProduct).String())
+		fmt.Printf("[DEBUG] COVARIANCE: %s\n", mpc.Reveal(covariance).String())
 
 	}
 
@@ -137,33 +139,35 @@ func examplePearsonsTestSimulation(numParties int, keyBits int, messageSpace *bi
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR: %s/3^%d\n", mpc.DecryptMPC(numerator).String(), numerator.FPScaleFactor)
+		fmt.Printf("[DEBUG] NUMERATOR: %s/3^%d\n", mpc.Reveal(numerator).String(), numerator.FPScaleFactor)
 	}
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] DENOMINATOR: %s/3^%d\n", mpc.DecryptMPC(denominator).String(), denominator.FPScaleFactor)
+		fmt.Printf("[DEBUG] DENOMINATOR: %s/3^%d\n", mpc.Reveal(denominator).String(), denominator.FPScaleFactor)
 	}
 
-	numeratorScaleFactor := numerator.FPScaleFactor
-	denominatorScaleFactor := denominator.FPScaleFactor
+	// numeratorScaleFactor := numerator.FPScaleFactor
+	// denominatorScaleFactor := denominator.FPScaleFactor
 
 	numerator.FPScaleFactor = 0
 	denominator.FPScaleFactor = 0
 
-	q := mpc.IntegerDivisionRevealMPC(denominator, numerator) // num < den
+	//q := mpc.IntegerDivisionRevealMPC(denominator, numerator) // num < den
 
-	scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.FPScaleBase)), big.NewInt(int64(denominatorScaleFactor-numeratorScaleFactor)), nil))
-	res := big.NewFloat(0.0).Quo(scaleFactor, big.NewFloat(0.0).SetInt(q))
+	// scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.FPScaleBase)), big.NewInt(int64(denominatorScaleFactor-numeratorScaleFactor)), nil))
+	// res := big.NewFloat(0.0).Quo(scaleFactor, big.NewFloat(0.0).SetInt(q))
 	endTime := time.Now()
 
-	fmt.Printf("Pearson's corelation coefficient, r = %s\n", res.Sqrt(res).String())
+	// fmt.Printf("Pearson's corelation coefficient, r = %s\n", res.Sqrt(res).String())
 	fmt.Println("Runtime: " + endTime.Sub(startTime).String())
 }
 
-func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, polyBase int, fpScaleBase int, fpPrecision float64, debug bool) {
+func exampleTTestSimulation(params *hypocert.MPCKeyGenParams) {
 
-	mpc := hypocert.NewMPCKeyGen(numParties, keyBits, messageSpace, polyBase, fpScaleBase, fpPrecision)
+	mpc := hypocert.NewMPCKeyGen(params)
+
+	debug := true
 
 	// Start dealer code
 	//**************************************************************************************
@@ -241,8 +245,8 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] MEAN X: %s\n", mpc.DecryptMPC(meanX).String())
-		fmt.Printf("[DEBUG] MEAN Y: %s\n", mpc.DecryptMPC(meanY).String())
+		fmt.Printf("[DEBUG] MEAN X: %s\n", mpc.Reveal(meanX).String())
+		fmt.Printf("[DEBUG] MEAN Y: %s\n", mpc.Reveal(meanY).String())
 	}
 
 	numerator := mpc.Pk.ESub(meanX, meanY)
@@ -257,24 +261,24 @@ func exampleTTestSimulation(numParties int, keyBits int, messageSpace *big.Int, 
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR: %s/3^%d\n", mpc.DecryptIntMPC(numerator).String(), numerator.FPScaleFactor)
-		fmt.Printf("[DEBUG] DENOMINATOR: %s/3^%d\n", mpc.DecryptIntMPC(denominator).String(), denominator.FPScaleFactor)
+		fmt.Printf("[DEBUG] NUMERATOR: %s/3^%d\n", mpc.RevealInt(numerator).String(), numerator.FPScaleFactor)
+		fmt.Printf("[DEBUG] DENOMINATOR: %s/3^%d\n", mpc.RevealInt(denominator).String(), denominator.FPScaleFactor)
 	}
 
-	numeratorScaleFactor := numerator.FPScaleFactor
-	denominatorScaleFactor := denominator.FPScaleFactor
+	// numeratorScaleFactor := numerator.FPScaleFactor
+	// denominatorScaleFactor := denominator.FPScaleFactor
 
-	numerator.FPScaleFactor = 0
-	denominator.FPScaleFactor = 0
+	// numerator.FPScaleFactor = 0
+	// denominator.FPScaleFactor = 0
 
-	q := mpc.IntegerDivisionRevealMPC(denominator, numerator) // num < den
+	// q := mpc.IntegerDivisionRevealMPC(denominator, numerator) // num < den
 
-	scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.FPScaleBase)), big.NewInt(int64(denominatorScaleFactor-numeratorScaleFactor)), nil))
-	res := big.NewFloat(0.0).Quo(scaleFactor, big.NewFloat(0.0).SetInt(q))
+	// scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.FPScaleBase)), big.NewInt(int64(denominatorScaleFactor-numeratorScaleFactor)), nil))
+	// res := big.NewFloat(0.0).Quo(scaleFactor, big.NewFloat(0.0).SetInt(q))
 
 	endTime := time.Now()
 
-	fmt.Printf("T STATISTIC, p = %f\n", res.Sqrt(res))
+	// fmt.Printf("T STATISTIC, p = %f\n", res.Sqrt(res))
 	log.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
 }
 
