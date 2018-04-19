@@ -16,6 +16,10 @@ func main() {
 
 	runBenchmark(2, false, false)
 	runBenchmark(2, true, false)
+	runBenchmark(4, false, false)
+	runBenchmark(4, true, false)
+	runBenchmark(8, false, false)
+	runBenchmark(8, true, false)
 
 	// runBenchmark(8)
 	// runBenchmark(16)
