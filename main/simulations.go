@@ -15,26 +15,27 @@ import (
 )
 
 // Simulation of Pearson's coorelation coefficient
-func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams) {
+func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, debug bool) (*big.Float, time.Duration) {
 
 	mpc := hypocert.NewMPCKeyGen(params)
 
-	debug := true
-
-	// BEGIN dealer code
+	// BEGIN [DEALER]
 	//**************************************************************************************
 
-	x, y, err := parseLocation("/home/azuka/Desktop/age_sex.csv")
+	x, y, err := parseDataset(filepath)
 
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
-
 	// mini test dataset
 	// x = []float64{56, 56, 65, 65, 50, 25, 87, 44, 35}
 	// y = []float64{87, 91, 85, 91, 75, 28, 122, 66, 58}
+	// result should be 0.96...
+
+	if debug {
+		fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
+	}
 
 	numRows := len(y)
 
@@ -51,24 +52,24 @@ func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams) {
 		sumXActual += x[i]
 		sumYActual += y[i]
 
-		plaintextX := mpc.Pk.NewPlaintext(big.NewFloat(x[i]))
-		plaintextY := mpc.Pk.NewPlaintext(big.NewFloat(y[i]))
+		plaintextX := mpc.Pk.EncodeFixedPoint(big.NewFloat(x[i]), mpc.Pk.FPPrecBits)
+		plaintextY := mpc.Pk.EncodeFixedPoint(big.NewFloat(y[i]), mpc.Pk.FPPrecBits)
 
 		eX[i] = mpc.Pk.Encrypt(plaintextX)
 		eY[i] = mpc.Pk.Encrypt(plaintextY)
 	}
-	//**************************************************************************************
-	// END dealer code
 
-	// keep track of time
+	//**************************************************************************************
+	// END [DEALER]
+
+	// keep track of runtime
 	startTime := time.Now()
 
 	// store for later use
-	invNumRows := big.NewFloat(1.0 / float64(numRows))
 	numRowsFlt := big.NewFloat(float64(numRows))
 
 	// an encryption of zero to be used as initial value
-	enc0 := mpc.Pk.Encrypt(mpc.Pk.NewPlaintext(big.NewFloat(0.0)))
+	enc0 := mpc.Pk.Encrypt(mpc.Pk.EncodeFixedPoint(big.NewFloat(0.0), mpc.Pk.FPPrecBits))
 
 	// sum of the squares
 	sumX2 := enc0
@@ -81,107 +82,112 @@ func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams) {
 		sumX = mpc.Pk.EAdd(sumX, eX[i])
 		sumY = mpc.Pk.EAdd(sumY, eY[i])
 
-		x2 := mpc.EMult(eX[i], eX[i])
+		x2 := mpc.EFPMult(eX[i], eX[i])
 		sumX2 = mpc.Pk.EAdd(sumX2, x2)
 
-		y2 := mpc.EMult(eY[i], eY[i])
+		y2 := mpc.EFPMult(eY[i], eY[i])
 		sumY2 = mpc.Pk.EAdd(sumY2, y2)
 	}
 
-	// get the mean
-	meanX := mpc.Pk.ECFloatMult(sumX, invNumRows)
-	meanY := mpc.Pk.ECFloatMult(sumY, invNumRows)
+	// compute (sum x)^2 and (sum y)^2
+	sum2X := mpc.EFPMult(sumX, sumX)
+	sum2Y := mpc.EFPMult(sumY, sumY)
+
+	// compute n*(sum x^2) - (sum x)^2
+	varianceX := mpc.Pk.ESub(mpc.ECMultFP(sumX2, numRowsFlt), sum2X)
+
+	// compute n*(sum y^2) - (sum y)^2
+	varianceY := mpc.Pk.ESub(mpc.ECMultFP(sumY2, numRowsFlt), sum2Y)
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] MEAN X: %s, SUM X: %s\n", mpc.Reveal(meanX).String(), mpc.Reveal(sumX).String())
-		fmt.Printf("[DEBUG] MEAN Y: %s, SUM Y: %s\n", mpc.Reveal(meanY).String(), mpc.Reveal(sumY).String())
+		fmt.Printf("[DEBUG] VARIANCE X: %s\n", mpc.RevealFP(varianceX, mpc.Pk.FPPrecBits).String())
+		fmt.Printf("[DEBUG] VARIANCE Y: %s\n", mpc.RevealFP(varianceY, mpc.Pk.FPPrecBits).String())
 	}
-
-	// compute (sum x)^2 and (sum y)^2
-	sum2X := mpc.EMult(sumX, sumX)
-	sum2Y := mpc.EMult(sumY, sumY)
-
-	// compute n*(sum x^2) - (sum x)^2
-	varianceX := mpc.Pk.ESub(mpc.Pk.ECFloatMult(sumX2, numRowsFlt), sum2X)
-
-	// compute n*(sum y^2) - (sum y)^2
-	varianceY := mpc.Pk.ESub(mpc.Pk.ECFloatMult(sumY2, numRowsFlt), sum2Y)
 
 	// compute sum xy
 	sumOfProduct := enc0
 	for i := 0; i < numRows; i++ {
-		sumOfProduct = mpc.Pk.EAdd(sumOfProduct, mpc.EMult(eX[i], eY[i]))
+		sumOfProduct = mpc.Pk.EAdd(sumOfProduct, mpc.EFPMult(eX[i], eY[i]))
 	}
+
+	covariance := mpc.EFPMult(varianceY, varianceX)
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] VARIANCE X: %s\n", mpc.Reveal(varianceX).String())
-		fmt.Printf("[DEBUG] VARIANCE Y: %s\n", mpc.Reveal(varianceY).String())
-	}
-
-	covariance := mpc.EMult(varianceY, varianceX)
-
-	if debug {
-		// sanity check
-		fmt.Printf("[DEBUG] SUM OF PRODUCTS: %s\n", mpc.Reveal(sumOfProduct).String())
-		fmt.Printf("[DEBUG] COVARIANCE: %s\n", mpc.Reveal(covariance).String())
+		fmt.Printf("[DEBUG] SUM OF PRODUCTS: %s\n", mpc.RevealFP(sumOfProduct, mpc.Pk.FPPrecBits).String())
+		fmt.Printf("[DEBUG] COVARIANCE: %s\n", mpc.RevealFP(covariance, mpc.Pk.FPPrecBits).String())
 
 	}
 
 	// compute (sum x)(sum y)
-	prodSums := mpc.EMult(sumY, sumX)
+	prodSums := mpc.EFPMult(sumY, sumX)
 
 	// compute the numerator^2 = [n*(sum xy) - (sum x)(sum y)]^2
-	numerator := mpc.Pk.ESub(mpc.Pk.ECFloatMult(sumOfProduct, numRowsFlt), prodSums)
-	numerator = mpc.EMult(numerator, numerator)
+	numerator := mpc.Pk.ESub(mpc.ECMultFP(sumOfProduct, numRowsFlt), prodSums)
+	numerator = mpc.EFPMult(numerator, numerator)
 	denominator := covariance
 
-	if debug {
-		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR: %s/3^%d\n", mpc.Reveal(numerator).String(), numerator.FPScaleFactor)
-	}
+	numerator = mpc.EFPTruncPR(numerator, mpc.Pk.K, mpc.Pk.FPPrecBits)
+	denominator = mpc.EFPTruncPR(denominator, mpc.Pk.K, mpc.Pk.FPPrecBits)
 
 	if debug {
-		// sanity check
-		fmt.Printf("[DEBUG] DENOMINATOR: %s/3^%d\n", mpc.Reveal(denominator).String(), denominator.FPScaleFactor)
+		fmt.Printf("[DEBUG] DENOMINATOR (before scale): %s\n", mpc.RevealInt(denominator).String())
 	}
 
-	// numeratorScaleFactor := numerator.FPScaleFactor
-	// denominatorScaleFactor := denominator.FPScaleFactor
+	// ensure denominator reciprocal within the necessary resolution
+	denominator, dscaleInv := mpc.EFPTruncToPrec(denominator)
 
-	numerator.FPScaleFactor = 0
-	denominator.FPScaleFactor = 0
+	if debug {
+		// sanity check
+		fmt.Printf("[DEBUG] NUMERATOR: %s\n", mpc.RevealInt(numerator).String())
+		fmt.Printf("[DEBUG] DENOMINATOR (after scale): %s\n", mpc.RevealInt(denominator).String())
+		fmt.Printf("[DEBUG] DENOMINATOR SCALE: %s/2^%d\n", mpc.RevealInt(dscaleInv).String(), mpc.Pk.K)
+	}
 
-	//q := mpc.IntegerDivisionRevealMPC(denominator, numerator) // num < den
+	res := mpc.EFPDivision(numerator, denominator)
+	pow := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.Pk.K-mpc.Pk.FPPrecBits)), nil)
 
-	// scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.FPScaleBase)), big.NewInt(int64(denominatorScaleFactor-numeratorScaleFactor)), nil))
-	// res := big.NewFloat(0.0).Quo(scaleFactor, big.NewFloat(0.0).SetInt(q))
+	res = mpc.Pk.ECMult(res, pow)
+	fmt.Printf("[DEBUG] DIV RES: %s\n", mpc.RevealInt(res).String())
+
+	res = mpc.EMult(res, dscaleInv) // dscaleInv has resolution of K-bits
+
+	pstat2 := mpc.RevealFP(res, 2*mpc.Pk.K)
+
 	endTime := time.Now()
 
-	// fmt.Printf("Pearson's corelation coefficient, r = %s\n", res.Sqrt(res).String())
-	fmt.Println("Runtime: " + endTime.Sub(startTime).String())
+	pstat := pstat2.Sqrt(pstat2)
+
+	if debug {
+		fmt.Printf("PEARSON STATISTIC, p = %s\n", pstat.String())
+		fmt.Println("Runtime: " + endTime.Sub(startTime).String())
+	}
+
+	return pstat, endTime.Sub(startTime)
 }
 
-func exampleTTestSimulation(params *hypocert.MPCKeyGenParams) {
+func exampleTTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, debug bool) (*big.Float, time.Duration) {
 
 	mpc := hypocert.NewMPCKeyGen(params)
 
-	debug := true
-
 	// Start dealer code
 	//**************************************************************************************
-	x, y, err := parseLocation("/home/azuka/Desktop/age_sex.csv")
+	x, y, err := parseDataset(filepath)
 
 	if err != nil {
 		panic(err)
 	}
 
 	// mini test dataset
-	// x := []float64{105.0, 119.0, 100.0, 97.0, 96.0, 101.0, 94.0, 95.0, 98.0}
-	// y := []float64{96.0, 99.0, 94.0, 89.0, 96.0, 93.0, 88.0, 105.0, 88.0}
+	// x = []float64{105.0, 119.0, 100.0, 97.0, 96.0, 101.0, 94.0, 95.0, 98.0}
+	// y = []float64{96.0, 99.0, 94.0, 89.0, 96.0, 93.0, 88.0, 105.0, 88.0}
+	// result should be 1.99...
 
-	fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
+	if debug {
+		fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
+	}
+
 	numRows := len(y)
 
 	var eX []*paillier.Ciphertext
@@ -200,8 +206,8 @@ func exampleTTestSimulation(params *hypocert.MPCKeyGenParams) {
 			sumXActual += x[i]
 			sumYActual += y[i]
 
-			plaintextX := mpc.Pk.NewPlaintext(big.NewFloat(x[i]))
-			plaintextY := mpc.Pk.NewPlaintext(big.NewFloat(y[i]))
+			plaintextX := mpc.Pk.EncodeFixedPoint(big.NewFloat(x[i]), mpc.Pk.FPPrecBits)
+			plaintextY := mpc.Pk.EncodeFixedPoint(big.NewFloat(y[i]), mpc.Pk.FPPrecBits)
 
 			eX[i] = mpc.Pk.Encrypt(plaintextX)
 			eY[i] = mpc.Pk.Encrypt(plaintextY)
@@ -213,13 +219,15 @@ func exampleTTestSimulation(params *hypocert.MPCKeyGenParams) {
 	//**************************************************************************************
 	// End dealer code
 
-	fmt.Println("[DEBUG] Finished encrypting dataset")
+	if debug {
+		fmt.Println("[DEBUG] Finished encrypting dataset")
+	}
 
 	startTime := time.Now()
 	invNumRows := big.NewFloat(1.0 / float64(numRows))
 
 	// encryption of zero for init value
-	e0 := mpc.Pk.Encrypt(mpc.Pk.NewPlaintext(big.NewFloat(0.0)))
+	e0 := mpc.Pk.Encrypt(mpc.Pk.EncodeFixedPoint(big.NewFloat(0.0), mpc.Pk.FPPrecBits))
 
 	// compute sum x^2 and sum y^2
 	sumX2 := e0
@@ -233,56 +241,64 @@ func exampleTTestSimulation(params *hypocert.MPCKeyGenParams) {
 		sumX = mpc.Pk.EAdd(sumX, eX[i])
 		sumY = mpc.Pk.EAdd(sumY, eY[i])
 
-		x2 := mpc.EMult(eX[i], eX[i])
+		x2 := mpc.EFPMult(eX[i], eX[i])
 		sumX2 = mpc.Pk.EAdd(sumX2, x2)
 
-		y2 := mpc.EMult(eY[i], eY[i])
+		y2 := mpc.EFPMult(eY[i], eY[i])
 		sumY2 = mpc.Pk.EAdd(sumY2, y2)
 	}
 
-	meanX := mpc.Pk.ECFloatMult(sumX, invNumRows)
-	meanY := mpc.Pk.ECFloatMult(sumY, invNumRows)
+	meanX := mpc.ECMultFP(sumX, invNumRows)
+	meanY := mpc.ECMultFP(sumY, invNumRows)
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] MEAN X: %s\n", mpc.Reveal(meanX).String())
-		fmt.Printf("[DEBUG] MEAN Y: %s\n", mpc.Reveal(meanY).String())
+		fmt.Printf("[DEBUG] MEAN X: %s\n", mpc.RevealFP(meanX, mpc.Pk.FPPrecBits).String())
+		fmt.Printf("[DEBUG] MEAN Y: %s\n", mpc.RevealFP(meanY, mpc.Pk.FPPrecBits).String())
 	}
 
 	numerator := mpc.Pk.ESub(meanX, meanY)
-	numerator = mpc.EMult(numerator, numerator)
+	numerator = mpc.EFPMult(numerator, numerator)
 
-	ta := mpc.Pk.ESub(sumX2, mpc.Pk.ECFloatMult(mpc.EMult(sumX, sumX), invNumRows))
-	tb := mpc.Pk.ESub(sumY2, mpc.Pk.ECFloatMult(mpc.EMult(sumY, sumY), invNumRows))
+	ta := mpc.Pk.ESub(sumX2, mpc.ECMultFP(mpc.EFPMult(sumX, sumX), invNumRows))
+	tb := mpc.Pk.ESub(sumY2, mpc.ECMultFP(mpc.EFPMult(sumY, sumY), invNumRows))
 
 	denominator := mpc.Pk.EAdd(ta, tb)
 	df := 2.0 / (float64((numRows + numRows - 2) * numRows))
-	denominator = mpc.Pk.ECFloatMult(denominator, big.NewFloat(df))
+	denominator = mpc.ECMultFP(denominator, big.NewFloat(df))
+
+	if debug {
+		fmt.Printf("[DEBUG] DENOMINATOR (before scale): %s\n", mpc.RevealInt(denominator).String())
+	}
+
+	// ensure denominator reciprocal within the necessary resolution
+	//denominator, dscaleInv := mpc.EFPTruncToPrec(denominator)
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR: %s/3^%d\n", mpc.RevealInt(numerator).String(), numerator.FPScaleFactor)
-		fmt.Printf("[DEBUG] DENOMINATOR: %s/3^%d\n", mpc.RevealInt(denominator).String(), denominator.FPScaleFactor)
+		fmt.Printf("[DEBUG] NUMERATOR: %s\n", mpc.RevealInt(numerator).String())
+		fmt.Printf("[DEBUG] DENOMINATOR (after scale): %s\n", mpc.RevealInt(denominator).String())
+		//	fmt.Printf("[DEBUG] DENOMINATOR SCALE: %s/2^%d\n", mpc.RevealInt(dscaleInv).String(), mpc.Pk.K)
 	}
 
-	// numeratorScaleFactor := numerator.FPScaleFactor
-	// denominatorScaleFactor := denominator.FPScaleFactor
+	res := mpc.EFPDivision(numerator, denominator)
 
-	// numerator.FPScaleFactor = 0
-	// denominator.FPScaleFactor = 0
+	//	res = mpc.EMult(res, dscaleInv) // dscaleInv has resolution of K-bits
 
-	// q := mpc.IntegerDivisionRevealMPC(denominator, numerator) // num < den
-
-	// scaleFactor := big.NewFloat(0).SetInt(big.NewInt(0).Exp(big.NewInt(int64(mpc.Pk.FPScaleBase)), big.NewInt(int64(denominatorScaleFactor-numeratorScaleFactor)), nil))
-	// res := big.NewFloat(0.0).Quo(scaleFactor, big.NewFloat(0.0).SetInt(q))
-
+	tstat2 := mpc.RevealFP(res, mpc.Pk.FPPrecBits)
 	endTime := time.Now()
 
-	// fmt.Printf("T STATISTIC, p = %f\n", res.Sqrt(res))
-	log.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
+	tstat := tstat2.Sqrt(tstat2)
+
+	if debug {
+		fmt.Printf("T STATISTIC, p = %f\n", tstat)
+		log.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
+	}
+
+	return tstat, endTime.Sub(startTime)
 }
 
-func parseLocation(file string) ([]float64, []float64, error) {
+func parseDataset(file string) ([]float64, []float64, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, nil, err

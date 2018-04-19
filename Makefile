@@ -2,12 +2,12 @@ all: build
 
 run:
 	export HOST_EXTRA_CFLAGS="-o3"
-	go build -o example main/*.go
-	./example
+	go build -o exe main/*.go
+	./exe
 build: 
-	go build -o example main/*.go
+	go build -o exe main/*.go
 clean: 
-	rm example
+	rm exe
 install: 
 	go install
 test: 

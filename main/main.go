@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"fmt"
 	"hypocert"
 	"log"
@@ -11,51 +10,91 @@ import (
 )
 
 func main() {
-	printWelcome()
+	// printWelcome()
 
 	runtime.GOMAXPROCS(10000)
 
-	keyGenParams := &hypocert.MPCKeyGenParams{
-		NumParties:       2,
-		Threshold:        2,
-		KeyBits:          512,
-		MessageSpaceBits: 32,
-		SecurityBits:     40,
-		FPPrecisionBits:  10,
-	}
+	runBenchmark(2, false, false)
+	runBenchmark(2, true, false)
 
-	//examplePearsonsTestSimulation(numParties, keyBits, messageSpaceBits, securityBits, polyBase, fpScaleBase, fpPrecision, true)
-	//exampleTTestSimulation(numParties, keyBits, messageSpaceBits, polyBase, securityBits, fpScaleBase, fpPrecision, true)
-	exampleMultiParty(keyGenParams)
+	// runBenchmark(8)
+	// runBenchmark(16)
+	// runBenchmark(32)
+
+	// keyGenParams := &hypocert.MPCKeyGenParams{
+	// 	NumParties:      2,
+	// 	Threshold:       2,
+	// 	KeyBits:         128,
+	// 	MessageBits:     84,
+	// 	SecurityBits:    30,
+	// 	FPPrecisionBits: 30,
+	// }
+
+	// exampleMultiParty(keyGenParams)
 }
 
-// generates a new random number < max
-func newCryptoRandom(max *big.Int) *big.Int {
-	rand, err := rand.Int(rand.Reader, max)
-	if err != nil {
-		log.Println(err)
+func runBenchmark(numParties int, zkp bool, debug bool) {
+
+	keyGenParams := &hypocert.MPCKeyGenParams{
+		NumParties:      numParties,
+		Threshold:       numParties,
+		Verify:          zkp,
+		KeyBits:         128,
+		MessageBits:     64,
+		SecurityBits:    30,
+		FPPrecisionBits: 30,
 	}
 
-	return rand
+	fmt.Println("------------------------------------------------")
+	fmt.Println("Running T-Test...")
+	fmt.Println("------------------------------------------------")
+
+	ttest, runtimeTtest := exampleTTestSimulation(keyGenParams, "/home/azuka/Desktop/age_sex.csv", debug)
+
+	fmt.Println("************************************************")
+	fmt.Println("T-Test p-value:              " + ttest.String())
+	fmt.Printf("Number of parties:        %d\n", numParties)
+	fmt.Printf("Zero-Knowledge Proofs:    %t\n", zkp)
+	fmt.Printf("T-Test runtime (s): 	  %f\n", runtimeTtest.Seconds())
+	fmt.Println("************************************************")
+
+	fmt.Println("------------------------------------------------")
+	fmt.Println("Running Pearson's Coorelation Test...")
+	fmt.Println("------------------------------------------------")
+
+	ptest, runtimePtest := examplePearsonsTestSimulation(keyGenParams, "/home/azuka/Desktop/age_sex.csv", debug)
+
+	fmt.Println("************************************************")
+	fmt.Println("Pearson's p-value:            " + ptest.String())
+	fmt.Printf("Number of parties:          %d\n", numParties)
+	fmt.Printf("Zero-Knowledge Proofs:      %t\n", zkp)
+	fmt.Printf("Pearson's Test runtime (s): %f\n", runtimePtest.Seconds())
+	fmt.Println("************************************************")
+
 }
 
 func exampleMultiParty(keyGenParams *hypocert.MPCKeyGenParams) {
 
 	mpc := hypocert.NewMPCKeyGen(keyGenParams)
-
 	fmt.Println("Generated keys")
 
-	d := big.NewFloat(9.0)
-	c := mpc.Pk.EncryptInt(mpc.Pk.EncodeFixedPoint(d, mpc.Pk.FPPrecBits))
+	a := big.NewFloat(1)
+	b := big.NewFloat(65536)
+
+	encoa := mpc.Pk.EncodeFixedPoint(a, mpc.Pk.FPPrecBits)
+	encob := mpc.Pk.EncodeFixedPoint(b, mpc.Pk.FPPrecBits)
+
+	ea := mpc.Pk.Encrypt(encoa)
+	eb := mpc.Pk.Encrypt(encob)
 
 	startTime := time.Now()
-	v := mpc.EFPReciprocal(c)
+
+	rcpr := mpc.EFPDivision(ea, eb)
 
 	endTime := time.Now()
 	log.Println("Runtime: " + endTime.Sub(startTime).String())
-	fmt.Println("Using div protocol: " + mpc.Reveal(v).String())
-	fmt.Println("Actual: " + big.NewFloat(0).Quo(big.NewFloat(1.0), d).String())
-
+	fmt.Println("Using div protocol: " + mpc.RevealInt(rcpr).String())
+	fmt.Println("Actual: " + big.NewFloat(0).Quo(a, b).String())
 }
 
 func printWelcome() {

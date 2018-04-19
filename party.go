@@ -1,8 +1,6 @@
 package hypocert
 
 import (
-	"crypto/rand"
-	"log"
 	"math/big"
 	"paillier"
 	"sync"
@@ -52,8 +50,8 @@ func (party *Party) precomputeRandomShares(n int) {
 
 func (party *Party) GetRandomMultShare(c *paillier.Ciphertext) (*paillier.Ciphertext, *paillier.Ciphertext) {
 
-	r := newCryptoRandom(party.Pk.N)
-	enc := party.Pk.EncryptInt(r)
+	r := random(party.Pk.N)
+	enc := party.Pk.Encrypt(r)
 	cMult := party.Pk.ECMult(c, r)
 
 	// simulate network latency
@@ -64,17 +62,27 @@ func (party *Party) GetRandomMultShare(c *paillier.Ciphertext) (*paillier.Cipher
 
 func (party *Party) GetRandomShare(bound *big.Int) *paillier.Ciphertext {
 
-	if bound.BitLen() < party.Pk.S {
-		bound = party.Pk.N
-	}
-
-	r := newCryptoRandom(bound)
-	enc := party.Pk.EncryptInt(r)
+	r := random(bound)
+	enc := party.Pk.Encrypt(r)
 
 	// simulate network latency
 	time.Sleep(networkLatency * time.Millisecond)
 
 	return enc
+}
+
+func (party *Party) GetRandomBitVector(l int) []*paillier.Ciphertext {
+
+	v := make([]*paillier.Ciphertext, l)
+	for i := 0; i < l; i++ {
+		b := random(big2)
+		v[i] = party.Pk.Encrypt(b)
+	}
+
+	// simulate network latency
+	time.Sleep(networkLatency * time.Millisecond)
+
+	return v
 }
 
 func (party *Party) PartialDecrypt(ciphertext *paillier.Ciphertext) *paillier.PartialDecryption {
@@ -86,12 +94,11 @@ func (party *Party) PartialDecrypt(ciphertext *paillier.Ciphertext) *paillier.Pa
 	return partial
 }
 
-// generates a new random number < max
-func newCryptoRandom(max *big.Int) *big.Int {
-	rand, err := rand.Int(rand.Reader, max)
-	if err != nil {
-		log.Println(err)
-	}
+func (party *Party) PartialDecryptAndProof(ciphertext *paillier.Ciphertext) *paillier.PartialDecryptionZKP {
 
-	return rand
+	// simulate network latency
+	time.Sleep(networkLatency * time.Millisecond)
+
+	zkp, _ := party.Sk.DecryptAndProduceZKP(ciphertext.C)
+	return zkp
 }
