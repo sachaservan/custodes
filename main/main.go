@@ -14,27 +14,27 @@ func main() {
 
 	runtime.GOMAXPROCS(10000)
 
-	runBenchmark(2, false, false)
-	runBenchmark(2, true, false)
-	runBenchmark(4, false, false)
-	runBenchmark(4, true, false)
-	runBenchmark(8, false, false)
-	runBenchmark(8, true, false)
+	//runBenchmark(2, false, false)
+	// runBenchmark(2, true, false)
+	// runBenchmark(4, false, false)
+	// runBenchmark(4, true, false)
+	// runBenchmark(8, false, false)
+	// runBenchmark(8, true, false)
 
 	// runBenchmark(8)
 	// runBenchmark(16)
 	// runBenchmark(32)
 
-	// keyGenParams := &hypocert.MPCKeyGenParams{
-	// 	NumParties:      2,
-	// 	Threshold:       2,
-	// 	KeyBits:         128,
-	// 	MessageBits:     84,
-	// 	SecurityBits:    30,
-	// 	FPPrecisionBits: 30,
-	// }
+	keyGenParams := &hypocert.MPCKeyGenParams{
+		NumParties:      3,
+		Threshold:       2,
+		KeyBits:         32,
+		MessageBits:     10,
+		SecurityBits:    0,
+		FPPrecisionBits: 10,
+	}
 
-	// exampleMultiParty(keyGenParams)
+	exampleMultiParty(keyGenParams)
 }
 
 func runBenchmark(numParties int, zkp bool, debug bool) {
@@ -44,9 +44,9 @@ func runBenchmark(numParties int, zkp bool, debug bool) {
 		Threshold:       numParties,
 		Verify:          zkp,
 		KeyBits:         128,
-		MessageBits:     64,
-		SecurityBits:    30,
-		FPPrecisionBits: 30,
+		MessageBits:     84,
+		SecurityBits:    40,
+		FPPrecisionBits: 20,
 	}
 
 	fmt.Println("------------------------------------------------")
@@ -82,23 +82,35 @@ func exampleMultiParty(keyGenParams *hypocert.MPCKeyGenParams) {
 	mpc := hypocert.NewMPCKeyGen(keyGenParams)
 	fmt.Println("Generated keys")
 
-	a := big.NewFloat(1)
-	b := big.NewFloat(65536)
-
-	encoa := mpc.Pk.EncodeFixedPoint(a, mpc.Pk.FPPrecBits)
-	encob := mpc.Pk.EncodeFixedPoint(b, mpc.Pk.FPPrecBits)
-
-	ea := mpc.Pk.Encrypt(encoa)
-	eb := mpc.Pk.Encrypt(encob)
-
+	shares, id := mpc.CreateShares(big.NewInt(4))
 	startTime := time.Now()
 
-	rcpr := mpc.EFPDivision(ea, eb)
+	mpc.DistributeShares(shares)
 
-	endTime := time.Now()
-	log.Println("Runtime: " + endTime.Sub(startTime).String())
-	fmt.Println("Using div protocol: " + mpc.RevealInt(rcpr).String())
-	fmt.Println("Actual: " + big.NewFloat(0).Quo(a, b).String())
+	newId := mpc.MultShares(id, id)
+
+	s := mpc.RevealShare(newId)
+	log.Println("Runtime: " + time.Now().Sub(startTime).String())
+
+	fmt.Println("re: " + s.String())
+
+	// a := big.NewFloat(1000)
+	// b := big.NewFloat(65532)
+
+	// encoa := mpc.Pk.EncodeFixedPoint(a, mpc.Pk.FPPrecBits)
+	// encob := mpc.Pk.EncodeFixedPoint(b, mpc.Pk.FPPrecBits)
+
+	// ea := mpc.Pk.Encrypt(encoa)
+	// eb := mpc.Pk.Encrypt(encob)
+
+	// startTime := time.Now()
+
+	// rcpr := mpc.EFPDivision(ea, eb)
+
+	// endTime := time.Now()
+	// log.Println("Runtime: " + endTime.Sub(startTime).String())
+	// fmt.Println("Using div protocol: " + mpc.RevealFP(rcpr, mpc.Pk.FPPrecBits).String())
+	// fmt.Println("Actual: " + big.NewFloat(0).Quo(a, b).String())
 }
 
 func printWelcome() {

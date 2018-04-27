@@ -14,6 +14,128 @@ import (
 	"time"
 )
 
+// func exampleChiSquaredSimulation(params *hypocert.MPCKeyGenParams, filepath string, debug bool) (*big.Float, time.Duration) {
+
+// 	mpc := hypocert.NewMPCKeyGen(params)
+
+// 	// Start dealer code
+// 	//**************************************************************************************
+// 	//x, y, err := parseDataset(filepath)
+
+// 	// if err != nil {
+// 	// 	panic(err)
+// 	// }
+
+// 	// mini test dataset
+// 	x := []float64{105.0, 119.0, 100.0, 97.0, 96.0, 101.0, 94.0, 95.0, 98.0}
+// 	y := []float64{96.0, 99.0, 94.0, 89.0, 96.0, 93.0, 88.0, 105.0, 88.0}
+// 	// result should be 1.99...
+
+// 	if debug {
+// 		fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
+// 	}
+
+// 	numRows := len(y)
+// 	numCols := 2
+
+// 	var eX []*paillier.Ciphertext
+// 	eX = make([]*paillier.Ciphertext, numRows)
+// 	var eY []*paillier.Ciphertext
+// 	eY = make([]*paillier.Ciphertext, numRows)
+
+// 	sumXActual := 0.0
+// 	sumYActual := 0.0
+// 	var wg sync.WaitGroup
+// 	for i := 0; i < numRows; i++ {
+// 		wg.Add(1)
+// 		go func(i int) {
+// 			defer wg.Done()
+
+// 			sumXActual += x[i]
+// 			sumYActual += y[i]
+
+// 			plaintextX := mpc.Pk.EncodeFixedPoint(big.NewFloat(x[i]), mpc.Pk.FPPrecBits)
+// 			plaintextY := mpc.Pk.EncodeFixedPoint(big.NewFloat(y[i]), mpc.Pk.FPPrecBits)
+
+// 			eX[i] = mpc.Pk.Encrypt(plaintextX)
+// 			eY[i] = mpc.Pk.Encrypt(plaintextY)
+// 		}(i)
+// 	}
+
+// 	wg.Wait()
+
+// 	//**************************************************************************************
+// 	// End dealer code
+
+// 	if debug {
+// 		fmt.Println("[DEBUG] Finished encrypting dataset")
+// 	}
+
+// 	startTime := time.Now()
+// 	invNumRows := big.NewFloat(1.0 / float64(numRows))
+
+// 	// encryption of zero for init value
+// 	e0 := mpc.Pk.Encrypt(mpc.Pk.EncodeFixedPoint(big.NewFloat(0.0), mpc.Pk.FPPrecBits))
+
+// 	// compute sum x and sum y
+// 	sumTotal := e0
+// 	totalX := e0
+// 	totalY := e0
+// 	sumCols := make([]*paillier.Ciphertext, numRows)
+// 	sumRows := make([]*paillier.Ciphertext, numCols)
+
+// 	for i := 0; i < numRows; i++ {
+// 		sumTotal = mpc.Pk.EAdd(sumTotal, eX[i])
+// 		sumTotal = mpc.Pk.EAdd(sumTotal, eY[i])
+
+// 		totalY = mpc.Pk.EAdd(totalY, eY[i])
+// 		totalX = mpc.Pk.EAdd(totalX, eX[i])
+
+// 		sumCols[i] = mpc.Pk.EAdd(sumCols[i], eX[i])
+// 		sumCols[i] = mpc.Pk.EAdd(sumCols[i], eY[i])
+// 	}
+
+// 	numerator := mpc.Pk.ESub(meanX, meanY)
+// 	numerator = mpc.EFPMult(numerator, numerator)
+
+// 	ta := mpc.Pk.ESub(sumX2, mpc.ECMultFP(mpc.EFPMult(sumX, sumX), invNumRows))
+// 	tb := mpc.Pk.ESub(sumY2, mpc.ECMultFP(mpc.EFPMult(sumY, sumY), invNumRows))
+
+// 	denominator := mpc.Pk.EAdd(ta, tb)
+// 	df := 2.0 / (float64((numRows + numRows - 2) * numRows))
+// 	denominator = mpc.ECMultFP(denominator, big.NewFloat(df))
+
+// 	if debug {
+// 		fmt.Printf("[DEBUG] DENOMINATOR (before scale): %s\n", mpc.RevealInt(denominator).String())
+// 	}
+
+// 	// ensure denominator reciprocal within the necessary resolution
+// 	//denominator, dscaleInv := mpc.EFPTruncToPrec(denominator)
+
+// 	if debug {
+// 		// sanity check
+// 		fmt.Printf("[DEBUG] NUMERATOR: %s\n", mpc.RevealInt(numerator).String())
+// 		fmt.Printf("[DEBUG] DENOMINATOR (after scale): %s\n", mpc.RevealInt(denominator).String())
+// 		//	fmt.Printf("[DEBUG] DENOMINATOR SCALE: %s/2^%d\n", mpc.RevealInt(dscaleInv).String(), mpc.Pk.K)
+// 	}
+
+// 	res := mpc.EFPDivision(numerator, denominator)
+
+// 	//	res = mpc.EMult(res, dscaleInv) // dscaleInv has resolution of K-bits
+
+// 	tstat2 := mpc.RevealFP(res, mpc.Pk.FPPrecBits)
+// 	endTime := time.Now()
+
+// 	tstat := tstat2.Sqrt(tstat2)
+
+// 	if debug {
+// 		fmt.Printf("T STATISTIC, p = %f\n", tstat)
+// 		log.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
+// 	}
+
+// 	return tstat, endTime.Sub(startTime)
+// }
+
 // Simulation of Pearson's coorelation coefficient
 func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, debug bool) (*big.Float, time.Duration) {
 
@@ -132,28 +254,14 @@ func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams, filepath st
 	denominator = mpc.EFPTruncPR(denominator, mpc.Pk.K, mpc.Pk.FPPrecBits)
 
 	if debug {
-		fmt.Printf("[DEBUG] DENOMINATOR (before scale): %s\n", mpc.RevealInt(denominator).String())
-	}
-
-	// ensure denominator reciprocal within the necessary resolution
-	denominator, dscaleInv := mpc.EFPTruncToPrec(denominator)
-
-	if debug {
 		// sanity check
 		fmt.Printf("[DEBUG] NUMERATOR: %s\n", mpc.RevealInt(numerator).String())
-		fmt.Printf("[DEBUG] DENOMINATOR (after scale): %s\n", mpc.RevealInt(denominator).String())
-		fmt.Printf("[DEBUG] DENOMINATOR SCALE: %s/2^%d\n", mpc.RevealInt(dscaleInv).String(), mpc.Pk.K)
+		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", mpc.RevealInt(denominator).String())
 	}
 
 	res := mpc.EFPDivision(numerator, denominator)
-	pow := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.Pk.K-mpc.Pk.FPPrecBits)), nil)
 
-	res = mpc.Pk.ECMult(res, pow)
-	fmt.Printf("[DEBUG] DIV RES: %s\n", mpc.RevealInt(res).String())
-
-	res = mpc.EMult(res, dscaleInv) // dscaleInv has resolution of K-bits
-
-	pstat2 := mpc.RevealFP(res, 2*mpc.Pk.K)
+	pstat2 := mpc.RevealFP(res, mpc.Pk.FPPrecBits)
 
 	endTime := time.Now()
 
@@ -268,22 +376,12 @@ func exampleTTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, d
 	denominator = mpc.ECMultFP(denominator, big.NewFloat(df))
 
 	if debug {
-		fmt.Printf("[DEBUG] DENOMINATOR (before scale): %s\n", mpc.RevealInt(denominator).String())
-	}
-
-	// ensure denominator reciprocal within the necessary resolution
-	//denominator, dscaleInv := mpc.EFPTruncToPrec(denominator)
-
-	if debug {
 		// sanity check
 		fmt.Printf("[DEBUG] NUMERATOR: %s\n", mpc.RevealInt(numerator).String())
-		fmt.Printf("[DEBUG] DENOMINATOR (after scale): %s\n", mpc.RevealInt(denominator).String())
-		//	fmt.Printf("[DEBUG] DENOMINATOR SCALE: %s/2^%d\n", mpc.RevealInt(dscaleInv).String(), mpc.Pk.K)
+		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", mpc.RevealInt(denominator).String())
 	}
 
 	res := mpc.EFPDivision(numerator, denominator)
-
-	//	res = mpc.EMult(res, dscaleInv) // dscaleInv has resolution of K-bits
 
 	tstat2 := mpc.RevealFP(res, mpc.Pk.FPPrecBits)
 	endTime := time.Now()

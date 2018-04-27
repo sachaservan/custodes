@@ -12,12 +12,6 @@ import (
 //////////////////////////////////////////
 // Constants and Caches
 
-// pre-computed solved bits for faster on-line phase
-var solvedBits [][]*paillier.Ciphertext
-var solvedBitsValue []*paillier.Ciphertext
-
-var nextSolvedBitsIndex = 0
-
 // store lagrange polynomials to avoid recalculations
 var funcORCoefficientCache sync.Map
 var funcXORCoefficientCache sync.Map
