@@ -11,7 +11,7 @@ func neg(a *big.Int, modulus *big.Int) *big.Int {
 func (mpc *MPC) computeBinaryFunctionCache(n int) {
 
 	for i := 0; i < n; i++ {
-		funcORInterpolation(i, mpc.Pk.N)
+		funcORInterpolation(i, mpc.Pk.P)
 	}
 }
 

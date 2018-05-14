@@ -14,7 +14,7 @@ func main() {
 
 	runtime.GOMAXPROCS(10000)
 
-	//runBenchmark(2, false, false)
+	runBenchmark(2, 0*time.Millisecond, false, false)
 	// runBenchmark(2, true, false)
 	// runBenchmark(4, false, false)
 	// runBenchmark(4, true, false)
@@ -25,39 +25,39 @@ func main() {
 	// runBenchmark(16)
 	// runBenchmark(32)
 
-	keyGenParams := &hypocert.MPCKeyGenParams{
-		NumParties:      3,
-		Threshold:       2,
-		KeyBits:         32,
-		MessageBits:     10,
-		SecurityBits:    0,
-		FPPrecisionBits: 10,
-	}
+	// params := &hypocert.MPCKeyGenParams{
+	// 	NumParties:      4,
+	// 	Threshold:       2,
+	// 	KeyBits:         128,
+	// 	MessageBits:     64,
+	// 	SecurityBits:    40,
+	// 	FPPrecisionBits: 20,
+	// }
 
-	exampleMultiParty(keyGenParams)
+	//exampleMultiParty(params)
 }
 
-func runBenchmark(numParties int, zkp bool, debug bool) {
+func runBenchmark(threshold int, latency time.Duration, zkp bool, debug bool) {
 
-	keyGenParams := &hypocert.MPCKeyGenParams{
-		NumParties:      numParties,
-		Threshold:       numParties,
+	params := &hypocert.MPCKeyGenParams{
+		NumParties:      2 * threshold,
+		Threshold:       threshold,
 		Verify:          zkp,
 		KeyBits:         128,
 		MessageBits:     84,
 		SecurityBits:    40,
 		FPPrecisionBits: 20,
-	}
+		NetworkLatency:  latency}
 
 	fmt.Println("------------------------------------------------")
 	fmt.Println("Running T-Test...")
 	fmt.Println("------------------------------------------------")
 
-	ttest, runtimeTtest := exampleTTestSimulation(keyGenParams, "/home/azuka/Desktop/age_sex.csv", debug)
+	ttest, runtimeTtest := exampleTTestSimulation(params, "/home/azuka/Desktop/age_sex.csv", debug)
 
 	fmt.Println("************************************************")
 	fmt.Println("T-Test p-value:              " + ttest.String())
-	fmt.Printf("Number of parties:        %d\n", numParties)
+	fmt.Printf("Number of parties:        %d\n", 2*threshold)
 	fmt.Printf("Zero-Knowledge Proofs:    %t\n", zkp)
 	fmt.Printf("T-Test runtime (s): 	  %f\n", runtimeTtest.Seconds())
 	fmt.Println("************************************************")
@@ -66,11 +66,11 @@ func runBenchmark(numParties int, zkp bool, debug bool) {
 	fmt.Println("Running Pearson's Coorelation Test...")
 	fmt.Println("------------------------------------------------")
 
-	ptest, runtimePtest := examplePearsonsTestSimulation(keyGenParams, "/home/azuka/Desktop/age_sex.csv", debug)
+	ptest, runtimePtest := examplePearsonsTestSimulation(params, "/home/azuka/Desktop/age_sex.csv", debug)
 
 	fmt.Println("************************************************")
 	fmt.Println("Pearson's p-value:            " + ptest.String())
-	fmt.Printf("Number of parties:          %d\n", numParties)
+	fmt.Printf("Number of parties:          %d\n", 2*threshold)
 	fmt.Printf("Zero-Knowledge Proofs:      %t\n", zkp)
 	fmt.Printf("Pearson's Test runtime (s): %f\n", runtimePtest.Seconds())
 	fmt.Println("************************************************")
@@ -80,37 +80,57 @@ func runBenchmark(numParties int, zkp bool, debug bool) {
 func exampleMultiParty(keyGenParams *hypocert.MPCKeyGenParams) {
 
 	mpc := hypocert.NewMPCKeyGen(keyGenParams)
-	fmt.Println("Generated keys")
 
-	shares, id := mpc.CreateShares(big.NewInt(4))
+	ct := mpc.Pk.Encrypt(big.NewInt(13))
+
+	share := mpc.PaillierToShare(ct)
+
+	fmt.Println("Converted share: " + mpc.RevealShare(share).String())
+
+	share0 := mpc.CreateShares(big.NewInt(10))
+	share1 := mpc.CreateShares(big.NewInt(5))
+	share2 := mpc.CreateShares(big.NewInt(1))
+	share3 := mpc.CreateShares(big.NewInt(0))
+
 	startTime := time.Now()
 
-	mpc.DistributeShares(shares)
+	fmt.Println("share0: " + mpc.RevealShare(share0).String())
+	fmt.Println("share1: " + mpc.RevealShare(share1).String())
+	fmt.Println("share2: " + mpc.RevealShare(share2).String())
+	fmt.Println("share3: " + mpc.RevealShare(share3).String())
 
-	newId := mpc.MultShares(id, id)
+	// res := mpc.Add(share0, share1)
+	a := mpc.Mult(share0, share1)
 
-	s := mpc.RevealShare(newId)
+	fmt.Println("a: " + mpc.RevealShare(a).String())
+
+	fmt.Println("share0: " + mpc.RevealShare(share0).String())
+	fmt.Println("share1: " + mpc.RevealShare(share1).String())
+
+	// b := mpc.Mult(a, share1)
+
+	// fmt.Println("a: " + mpc.RevealShare(b).String())
+
+	r4 := mpc.TruncPR(share1, mpc.Pk.K, 3)
+	fmt.Println("r: " + mpc.RevealShare(r4).String())
+
+	for {
+		v := mpc.FPDivision(share0, share1)
+		fmt.Println("v: " + mpc.RevealShareFP(v, mpc.Pk.FPPrecBits).String())
+
+		// bits := mpc.EBitsDec(share1, mpc.Pk.K)
+
+		// for i := len(bits) - 1; i >= 0; i-- {
+		// 	s := mpc.RevealShare(bits[i])
+		// 	fmt.Print(s.String())
+		// }
+
+		// fmt.Println()
+	}
+
+	fmt.Println()
 	log.Println("Runtime: " + time.Now().Sub(startTime).String())
 
-	fmt.Println("re: " + s.String())
-
-	// a := big.NewFloat(1000)
-	// b := big.NewFloat(65532)
-
-	// encoa := mpc.Pk.EncodeFixedPoint(a, mpc.Pk.FPPrecBits)
-	// encob := mpc.Pk.EncodeFixedPoint(b, mpc.Pk.FPPrecBits)
-
-	// ea := mpc.Pk.Encrypt(encoa)
-	// eb := mpc.Pk.Encrypt(encob)
-
-	// startTime := time.Now()
-
-	// rcpr := mpc.EFPDivision(ea, eb)
-
-	// endTime := time.Now()
-	// log.Println("Runtime: " + endTime.Sub(startTime).String())
-	// fmt.Println("Using div protocol: " + mpc.RevealFP(rcpr, mpc.Pk.FPPrecBits).String())
-	// fmt.Println("Actual: " + big.NewFloat(0).Quo(a, b).String())
 }
 
 func printWelcome() {

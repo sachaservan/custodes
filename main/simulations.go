@@ -259,15 +259,18 @@ func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams, filepath st
 		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", mpc.RevealInt(denominator).String())
 	}
 
-	res := mpc.EFPDivision(numerator, denominator)
+	numeratorShare := mpc.PaillierToShare(numerator)
+	denominatorShare := mpc.PaillierToShare(denominator)
 
-	pstat2 := mpc.RevealFP(res, mpc.Pk.FPPrecBits)
+	res := mpc.FPDivision(numeratorShare, denominatorShare)
+
+	pstat2 := mpc.RevealShareFP(res, mpc.Pk.FPPrecBits)
+	pstat := pstat2.Sqrt(pstat2)
 
 	endTime := time.Now()
 
-	pstat := pstat2.Sqrt(pstat2)
-
 	if debug {
+
 		fmt.Printf("PEARSON STATISTIC, p = %s\n", pstat.String())
 		fmt.Println("Runtime: " + endTime.Sub(startTime).String())
 	}
@@ -381,9 +384,12 @@ func exampleTTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, d
 		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", mpc.RevealInt(denominator).String())
 	}
 
-	res := mpc.EFPDivision(numerator, denominator)
+	numeratorShare := mpc.PaillierToShare(numerator)
+	denominatorShare := mpc.PaillierToShare(denominator)
 
-	tstat2 := mpc.RevealFP(res, mpc.Pk.FPPrecBits)
+	res := mpc.FPDivision(numeratorShare, denominatorShare)
+
+	tstat2 := mpc.RevealShareFP(res, mpc.Pk.FPPrecBits)
 	endTime := time.Now()
 
 	tstat := tstat2.Sqrt(tstat2)
