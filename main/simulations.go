@@ -14,130 +14,98 @@ import (
 	"time"
 )
 
-// func exampleChiSquaredSimulation(params *hypocert.MPCKeyGenParams, filepath string, debug bool) (*big.Float, time.Duration) {
+func exampleChiSquaredSimulation(params *hypocert.MPCKeyGenParams, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
 
-// 	mpc := hypocert.NewMPCKeyGen(params)
+	mpc := hypocert.NewMPCKeyGen(params)
 
-// 	// Start dealer code
-// 	//**************************************************************************************
-// 	//x, y, err := parseDataset(filepath)
+	// Start dealer code
+	//**************************************************************************************
+	//x, y, err := parseDataset(filepath)
 
-// 	// if err != nil {
-// 	// 	panic(err)
-// 	// }
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-// 	// mini test dataset
-// 	x := []float64{105.0, 119.0, 100.0, 97.0, 96.0, 101.0, 94.0, 95.0, 98.0}
-// 	y := []float64{96.0, 99.0, 94.0, 89.0, 96.0, 93.0, 88.0, 105.0, 88.0}
-// 	// result should be 1.99...
+	// mini test dataset
+	x := []float64{29.0, 24.0, 22.0, 19.0, 21.0, 18.0, 19.0, 20.0, 23.0, 18.0, 20.0, 23.0}
 
-// 	if debug {
-// 		fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
-// 	}
+	numAttribs := len(x)
 
-// 	numRows := len(y)
-// 	numCols := 2
+	var eX []*paillier.Ciphertext
+	eX = make([]*paillier.Ciphertext, len(x))
 
-// 	var eX []*paillier.Ciphertext
-// 	eX = make([]*paillier.Ciphertext, numRows)
-// 	var eY []*paillier.Ciphertext
-// 	eY = make([]*paillier.Ciphertext, numRows)
+	var wg sync.WaitGroup
+	for i := 0; i < numAttribs; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
 
-// 	sumXActual := 0.0
-// 	sumYActual := 0.0
-// 	var wg sync.WaitGroup
-// 	for i := 0; i < numRows; i++ {
-// 		wg.Add(1)
-// 		go func(i int) {
-// 			defer wg.Done()
+			plaintextX := mpc.Pk.EncodeFixedPoint(big.NewFloat(x[i]), mpc.Pk.FPPrecBits)
+			eX[i] = mpc.Pk.Encrypt(plaintextX)
+		}(i)
+	}
 
-// 			sumXActual += x[i]
-// 			sumYActual += y[i]
+	wg.Wait()
 
-// 			plaintextX := mpc.Pk.EncodeFixedPoint(big.NewFloat(x[i]), mpc.Pk.FPPrecBits)
-// 			plaintextY := mpc.Pk.EncodeFixedPoint(big.NewFloat(y[i]), mpc.Pk.FPPrecBits)
+	//**************************************************************************************
+	// End dealer code
 
-// 			eX[i] = mpc.Pk.Encrypt(plaintextX)
-// 			eY[i] = mpc.Pk.Encrypt(plaintextY)
-// 		}(i)
-// 	}
+	if debug {
+		fmt.Println("[DEBUG] Finished encrypting dataset")
+	}
 
-// 	wg.Wait()
+	startTime := time.Now()
+	invNumAttribs := big.NewFloat(1.0 / float64(numAttribs))
 
-// 	//**************************************************************************************
-// 	// End dealer code
+	// encryption of zero for init value
+	e0 := mpc.Pk.Encrypt(mpc.Pk.EncodeFixedPoint(big.NewFloat(0.0), mpc.Pk.FPPrecBits))
 
-// 	if debug {
-// 		fmt.Println("[DEBUG] Finished encrypting dataset")
-// 	}
+	// compute the expected value
+	sumTotal := e0
 
-// 	startTime := time.Now()
-// 	invNumRows := big.NewFloat(1.0 / float64(numRows))
+	for i := 0; i < numAttribs; i++ {
+		sumTotal = mpc.Pk.EAdd(sumTotal, eX[i])
+	}
 
-// 	// encryption of zero for init value
-// 	e0 := mpc.Pk.Encrypt(mpc.Pk.EncodeFixedPoint(big.NewFloat(0.0), mpc.Pk.FPPrecBits))
+	expectedValue := mpc.ECMultFP(sumTotal, invNumAttribs)
+	fmt.Printf("[DEBUG] EXPECTED VALUE: %s\n", mpc.RevealFP(expectedValue, mpc.Pk.FPPrecBits).String())
 
-// 	// compute sum x and sum y
-// 	sumTotal := e0
-// 	totalX := e0
-// 	totalY := e0
-// 	sumCols := make([]*paillier.Ciphertext, numRows)
-// 	sumRows := make([]*paillier.Ciphertext, numCols)
+	residual := make([]*paillier.Ciphertext, numAttribs)
 
-// 	for i := 0; i < numRows; i++ {
-// 		sumTotal = mpc.Pk.EAdd(sumTotal, eX[i])
-// 		sumTotal = mpc.Pk.EAdd(sumTotal, eY[i])
+	for i := 0; i < numAttribs; i++ {
+		residual[i] = mpc.Pk.ESub(expectedValue, eX[i])
+		residual[i] = mpc.EMult(residual[i], residual[i])
+	}
 
-// 		totalY = mpc.Pk.EAdd(totalY, eY[i])
-// 		totalX = mpc.Pk.EAdd(totalX, eX[i])
+	endTimePaillier := time.Now()
 
-// 		sumCols[i] = mpc.Pk.EAdd(sumCols[i], eX[i])
-// 		sumCols[i] = mpc.Pk.EAdd(sumCols[i], eY[i])
-// 	}
+	expectedValueShare := mpc.PaillierToShare(expectedValue)
+	expectedValueRcpr := mpc.FPReciprocal(expectedValueShare)
 
-// 	numerator := mpc.Pk.ESub(meanX, meanY)
-// 	numerator = mpc.EFPMult(numerator, numerator)
+	chi2 := mpc.CreateShares(big.NewInt(0))
+	for i := 0; i < numAttribs; i++ {
+		residualShare := mpc.PaillierToShare(residual[i])
+		component := mpc.Mult(residualShare, expectedValueRcpr)
+		chi2 = mpc.Add(chi2, component)
+	}
 
-// 	ta := mpc.Pk.ESub(sumX2, mpc.ECMultFP(mpc.EFPMult(sumX, sumX), invNumRows))
-// 	tb := mpc.Pk.ESub(sumY2, mpc.ECMultFP(mpc.EFPMult(sumY, sumY), invNumRows))
+	chi2Stat := mpc.RevealShareFP(chi2, mpc.Pk.FPPrecBits)
+	endTime := time.Now()
 
-// 	denominator := mpc.Pk.EAdd(ta, tb)
-// 	df := 2.0 / (float64((numRows + numRows - 2) * numRows))
-// 	denominator = mpc.ECMultFP(denominator, big.NewFloat(df))
+	if debug {
+		fmt.Printf("CHI^2 STATISTIC, chi2 = %f\n", chi2Stat)
+		log.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
+	}
 
-// 	if debug {
-// 		fmt.Printf("[DEBUG] DENOMINATOR (before scale): %s\n", mpc.RevealInt(denominator).String())
-// 	}
+	totalTime := endTime.Sub(startTime)
+	divTime := time.Now().Sub(endTimePaillier)
+	paillierTime := endTimePaillier.Sub(startTime)
 
-// 	// ensure denominator reciprocal within the necessary resolution
-// 	//denominator, dscaleInv := mpc.EFPTruncToPrec(denominator)
-
-// 	if debug {
-// 		// sanity check
-// 		fmt.Printf("[DEBUG] NUMERATOR: %s\n", mpc.RevealInt(numerator).String())
-// 		fmt.Printf("[DEBUG] DENOMINATOR (after scale): %s\n", mpc.RevealInt(denominator).String())
-// 		//	fmt.Printf("[DEBUG] DENOMINATOR SCALE: %s/2^%d\n", mpc.RevealInt(dscaleInv).String(), mpc.Pk.K)
-// 	}
-
-// 	res := mpc.EFPDivision(numerator, denominator)
-
-// 	//	res = mpc.EMult(res, dscaleInv) // dscaleInv has resolution of K-bits
-
-// 	tstat2 := mpc.RevealFP(res, mpc.Pk.FPPrecBits)
-// 	endTime := time.Now()
-
-// 	tstat := tstat2.Sqrt(tstat2)
-
-// 	if debug {
-// 		fmt.Printf("T STATISTIC, p = %f\n", tstat)
-// 		log.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
-// 	}
-
-// 	return tstat, endTime.Sub(startTime)
-// }
+	return chi2Stat, len(x), totalTime, paillierTime, divTime, mpc.DeleteAllShares()
+}
 
 // Simulation of Pearson's coorelation coefficient
-func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, debug bool) (*big.Float, time.Duration) {
+func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
 
 	mpc := hypocert.NewMPCKeyGen(params)
 
@@ -259,6 +227,8 @@ func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams, filepath st
 		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", mpc.RevealInt(denominator).String())
 	}
 
+	endTimePaillier := time.Now()
+
 	numeratorShare := mpc.PaillierToShare(numerator)
 	denominatorShare := mpc.PaillierToShare(denominator)
 
@@ -275,10 +245,14 @@ func examplePearsonsTestSimulation(params *hypocert.MPCKeyGenParams, filepath st
 		fmt.Println("Runtime: " + endTime.Sub(startTime).String())
 	}
 
-	return pstat, endTime.Sub(startTime)
+	totalTime := endTime.Sub(startTime)
+	divTime := time.Now().Sub(endTimePaillier)
+	paillierTime := endTimePaillier.Sub(startTime)
+
+	return pstat, len(x), totalTime, paillierTime, divTime, mpc.DeleteAllShares()
 }
 
-func exampleTTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, debug bool) (*big.Float, time.Duration) {
+func exampleTTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
 
 	mpc := hypocert.NewMPCKeyGen(params)
 
@@ -384,6 +358,8 @@ func exampleTTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, d
 		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", mpc.RevealInt(denominator).String())
 	}
 
+	endTimePaillier := time.Now()
+
 	numeratorShare := mpc.PaillierToShare(numerator)
 	denominatorShare := mpc.PaillierToShare(denominator)
 
@@ -399,7 +375,11 @@ func exampleTTestSimulation(params *hypocert.MPCKeyGenParams, filepath string, d
 		log.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
 	}
 
-	return tstat, endTime.Sub(startTime)
+	totalTime := endTime.Sub(startTime)
+	divTime := time.Now().Sub(endTimePaillier)
+	paillierTime := endTimePaillier.Sub(startTime)
+
+	return tstat, len(x), totalTime, paillierTime, divTime, mpc.DeleteAllShares()
 }
 
 func parseDataset(file string) ([]float64, []float64, error) {

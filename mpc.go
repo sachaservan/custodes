@@ -61,6 +61,17 @@ func (mpc *MPC) RevealShare(share *node.Share) *big.Int {
 	return mpc.ReconstructShare(values)
 }
 
+func (mpc *MPC) DeleteAllShares() int {
+
+	numShares := node.NewShareID()
+
+	for i := 0; i < len(mpc.Parties); i++ {
+		mpc.Parties[i].DeleteAllShares()
+	}
+
+	return numShares
+}
+
 func (mpc *MPC) CopyShare(share *node.Share) *node.Share {
 
 	id := node.NewShareID()
@@ -491,7 +502,7 @@ func (mpc *MPC) ERandomAndShare(bound *big.Int) (*paillier.Ciphertext, *node.Sha
 
 func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 
-	nu := big.NewInt(0).Binomial(int64(params.NumParties), int64(params.Threshold)).Int64()
+	nu := int64(0) //big.NewInt(0).Binomial(int64(params.NumParties), int64(params.Threshold)).Int64()
 	if int64(params.MessageBits+params.SecurityBits+params.FPPrecisionBits)+nu >= int64(2*params.KeyBits) {
 		panic("modulus not big enough for given parameters")
 	}

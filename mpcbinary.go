@@ -6,7 +6,6 @@ import (
 	"math"
 	"math/big"
 	"node"
-	"paillier"
 	"sync"
 )
 
@@ -36,9 +35,25 @@ const (
 func (mpc *MPC) RandomBits(m int) []*node.Share {
 
 	bits := make([]*node.Share, m)
+	twoInv := big.NewInt(0).ModInverse(big.NewInt(2), mpc.Pk.P)
+	one := mpc.CreateShares(big.NewInt(1))
 
+	var c *big.Int
 	for i := 0; i < m; i++ {
-		bits[i] = mpc.CreateShares(paillier.CryptoRandom(big.NewInt(2))) // TODO: fix
+
+		for {
+			a := mpc.RandomShare(mpc.Pk.P)
+			a2 := mpc.Mult(a, a)
+			c = mpc.RevealShare(a2)
+			if c.Cmp(big0) != 0 {
+				c.ModSqrt(c, mpc.Pk.P)
+				c.ModInverse(c, mpc.Pk.P)
+				b := mpc.MultC(a, c)
+				b = mpc.Add(b, one)
+				bits[i] = mpc.MultC(b, twoInv)
+				break
+			}
+		}
 	}
 
 	return bits
