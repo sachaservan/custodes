@@ -3,9 +3,9 @@ package hypocert
 import (
 	"errors"
 	"fmt"
+	"hypocertnode"
 	"math"
 	"math/big"
-	"node"
 	"sync"
 )
 

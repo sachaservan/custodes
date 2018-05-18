@@ -2,9 +2,9 @@ package hypocert
 
 import (
 	"crypto/rand"
+	"hypocertnode"
 	"math"
 	"math/big"
-	"node"
 	"paillier"
 	"sync"
 	"time"
