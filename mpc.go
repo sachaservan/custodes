@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+// Benchmark
+
+var MultCountPaillier int
+var MultCountShares int
+
 // Constants
 var big2InvN *big.Int
 var big2InvP *big.Int
@@ -170,6 +175,8 @@ func (mpc *MPC) Mult(share1, share2 *node.Share) *node.Share {
 		}
 	}
 
+	MultCountShares++
+
 	return res
 }
 
@@ -309,6 +316,8 @@ func (mpc *MPC) EMult(a, b *paillier.Ciphertext) *paillier.Ciphertext {
 	res := mpc.Pk.ECMult(a, rev)
 	res = mpc.Pk.ESub(res, val)
 
+	MultCountPaillier++
+
 	return res
 }
 
@@ -316,6 +325,11 @@ func (mpc *MPC) ECMultFP(ct *paillier.Ciphertext, fp *big.Float) *paillier.Ciphe
 	e := mpc.Pk.EncodeFixedPoint(fp, mpc.Pk.FPPrecBits)
 	m := new(big.Int).Exp(ct.C, e, mpc.Pk.GetNSquare())
 	return mpc.EFPTruncPR(&paillier.Ciphertext{m}, mpc.Pk.K, mpc.Pk.FPPrecBits)
+}
+
+func (mpc *MPC) ECMult(ct *paillier.Ciphertext, c *big.Int) *paillier.Ciphertext {
+	m := new(big.Int).Exp(ct.C, c, mpc.Pk.GetNSquare())
+	return &paillier.Ciphertext{m}
 }
 
 func (mpc *MPC) EFPMult(a, b *paillier.Ciphertext) *paillier.Ciphertext {
@@ -502,8 +516,8 @@ func (mpc *MPC) ERandomAndShare(bound *big.Int) (*paillier.Ciphertext, *node.Sha
 
 func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 
-	nu := int64(0) //big.NewInt(0).Binomial(int64(params.NumParties), int64(params.Threshold)).Int64()
-	if int64(params.MessageBits+params.SecurityBits+params.FPPrecisionBits)+nu >= int64(2*params.KeyBits) {
+	//nu := big.NewInt(0).Binomial(int64(params.NumParties), int64(params.Threshold)).Int64()
+	if int64(params.MessageBits+params.SecurityBits+params.FPPrecisionBits) >= int64(2*params.KeyBits) {
 		panic("modulus not big enough for given parameters")
 	}
 
@@ -511,14 +525,13 @@ func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 		panic("message space is smaller than the precision")
 	}
 
-	shareModulusBits := int(nu) + 2*params.MessageBits + params.SecurityBits + params.FPPrecisionBits + int(math.Log2(float64(params.NumParties))) + 1
+	shareModulusBits := 2*params.KeyBits + 1
 
 	tkh := paillier.GetThresholdKeyGenerator(params.KeyBits, params.NumParties, params.Threshold, rand.Reader)
 	tpks, err := tkh.Generate()
 	pk := &tpks[0].PublicKey
 	pk.S = params.SecurityBits
 	pk.K = params.MessageBits
-	pk.V = int(nu)
 	pk.P, err = rand.Prime(rand.Reader, shareModulusBits)
 	if err != nil {
 		panic("could not generate share prime")

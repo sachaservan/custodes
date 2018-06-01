@@ -446,24 +446,44 @@ func (mpc *MPC) BitsLT(a, b []*node.Share) *node.Share {
 	degree := len(a) // len(a) = len(b) now
 	e := make([]*node.Share, degree)
 
+	var wg sync.WaitGroup
+
 	for i := 0; i < degree; i++ {
-		d := mpc.Sub(a[i], b[i])
-		d2 := mpc.Mult(d, d)
-		e[degree-i-1] = d2
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			d := mpc.Sub(a[i], b[i])
+			d2 := mpc.Mult(d, d)
+			e[degree-i-1] = d2
+		}(i)
 	}
+
+	wg.Wait()
 
 	f := mpc.BitsPrefixOR(e)
 
 	g := make([]*node.Share, degree)
 	g[0] = f[0]
 	for i := degree - 1; i > 0; i-- {
-		g[i] = mpc.Sub(f[i], f[i-1])
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			g[i] = mpc.Sub(f[i], f[i-1])
+		}(i)
 	}
+
+	wg.Wait()
 
 	h := make([]*node.Share, degree)
 	for i := 0; i < degree; i++ {
-		h[i] = mpc.Mult(g[degree-i-1], b[i])
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			h[i] = mpc.Mult(g[degree-i-1], b[i])
+		}(i)
 	}
+
+	wg.Wait()
 
 	res := mpc.CreateShares(big.NewInt(0))
 
