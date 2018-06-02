@@ -13,10 +13,54 @@ func main() {
 
 	runtime.GOMAXPROCS(10000)
 
-	// TODO: change accordingly
+	// TO RUN BENCHMARKS:
+
+	// 1) Change root dir to point to correct location
 	ROOTDIR := "/home/azuka/go/src/hypocert"
+
+	// 2) Un-comment as needed:
+
+	/* 1000 row dataset */
 	filename := ROOTDIR + "/benchmark/benchmark_1000.csv"
+
+	/* 1000 row dataset, 10 categories */
 	filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_1000_10.csv"
+
+	/* 1000 row dataset, 25 categories */
+	// filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_1000_25.csv"
+
+	/* 1000 row dataset, 50 categories */
+	// filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_1000_50.csv"
+
+	/************************************************************************/
+
+	/* 5000 row dataset */
+	//filename := ROOTDIR + "/benchmark/benchmark_5000.csv"
+
+	/* 5000 row dataset, 10 categories */
+	//filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_1000_10.csv"
+
+	/* 5000 row dataset, 25 categories */
+	// filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_5000_25.csv"
+
+	/* 5000 row dataset, 50 categories */
+	// filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_5000_50.csv"
+
+	/************************************************************************/
+
+	/* 10000 row dataset */
+	//filename := ROOTDIR + "/benchmark/benchmark_5000.csv"
+
+	/* 10000 row dataset, 10 categories */
+	//filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_1000_10.csv"
+
+	/* 10000 row dataset, 25 categories */
+	// filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_5000_25.csv"
+
+	/* 10000 row dataset, 50 categories */
+	// filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_5000_50.csv"
+
+	/************************************************************************/
 
 	runBenchmark(filename, filenameChiSq, 2, 0*time.Millisecond, false, true)
 	runBenchmark(filename, filenameChiSq, 4, 0*time.Millisecond, false, false)
