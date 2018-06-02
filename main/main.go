@@ -18,13 +18,13 @@ func main() {
 	filename := ROOTDIR + "/benchmark/benchmark_1000.csv"
 	filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_1000_10.csv"
 
-	runBenchmark(filename, 2, 0*time.Millisecond, false, true)
-	runBenchmark(filename, 4, 0*time.Millisecond, false, false)
-	runBenchmark(filename, 8, 0*time.Millisecond, false, false)
-	runBenchmark(filename, 16, 0*time.Millisecond, false, false)
+	runBenchmark(filename, filenameChiSq, 2, 0*time.Millisecond, false, true)
+	runBenchmark(filename, filenameChiSq, 4, 0*time.Millisecond, false, false)
+	runBenchmark(filename, filenameChiSq, 8, 0*time.Millisecond, false, false)
+	runBenchmark(filename, filenameChiSq, 16, 0*time.Millisecond, false, false)
 }
 
-func runBenchmark(filename string, threshold int, latency time.Duration, zkp bool, debug bool) {
+func runBenchmark(filename string, filenameChiSq string, threshold int, latency time.Duration, zkp bool, debug bool) {
 
 	params := &hypocert.MPCKeyGenParams{
 		NumParties:      2 * threshold,
@@ -42,9 +42,15 @@ func runBenchmark(filename string, threshold int, latency time.Duration, zkp boo
 	fmt.Println("Running Chi^2 Test...")
 	fmt.Println("------------------------------------------------")
 
+	//**************************************************************************************
+	//**************************************************************************************
+	// Chi-Squared Test Benchmark
+	//**************************************************************************************
+	//**************************************************************************************
+
 	hypocert.MultCountPaillier = 0
 	hypocert.MultCountShares = 0
-	chi2test, numRows, numCategories, totalTime, paillierTime, divTime, numSharesCreated := exampleChiSquaredSimulation(mpc, filename, debug)
+	chi2test, numRows, numCategories, totalTime, paillierTime, divTime, numSharesCreated := exampleChiSquaredSimulation(mpc, filenameChiSq, debug)
 
 	fmt.Println("************************************************")
 	fmt.Println("Chi^2 p-value:                    " + chi2test.String())
@@ -60,6 +66,12 @@ func runBenchmark(filename string, threshold int, latency time.Duration, zkp boo
 	fmt.Printf("  Division runtime (s):     %f\n", divTime.Seconds())
 
 	fmt.Println("************************************************")
+
+	//**************************************************************************************
+	//**************************************************************************************
+	// T Test Benchmark
+	//**************************************************************************************
+	//**************************************************************************************
 
 	fmt.Println("------------------------------------------------")
 	fmt.Println("Running T-Test...")
@@ -82,6 +94,12 @@ func runBenchmark(filename string, threshold int, latency time.Duration, zkp boo
 	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
 	fmt.Println("************************************************")
 
+	//**************************************************************************************
+	//**************************************************************************************
+	// Pearson's Test Benchmark
+	//**************************************************************************************
+	//**************************************************************************************
+
 	fmt.Println("------------------------------------------------")
 	fmt.Println("Running Pearson's Coorelation Test...")
 	fmt.Println("------------------------------------------------")
@@ -103,6 +121,12 @@ func runBenchmark(filename string, threshold int, latency time.Duration, zkp boo
 	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
 
 	fmt.Println("************************************************")
+
+	//**************************************************************************************
+	//**************************************************************************************
+	// Multiplication Benchmark
+	//**************************************************************************************
+	//**************************************************************************************
 
 	fmt.Println("------------------------------------------------")
 	fmt.Println("Benchmarking Multiplication times...")

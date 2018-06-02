@@ -141,18 +141,18 @@ func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool)
 // Simulation of Pearson's coorelation coefficient
 func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
 
-	// BEGIN [DEALER]
 	//**************************************************************************************
-
+	//**************************************************************************************
+	// START DEALER CODE
+	//**************************************************************************************
+	//**************************************************************************************
 	x, y, err := parseDataset(filepath)
-
 	if err != nil {
 		panic(err)
 	}
-
 	// mini test dataset
-	x = []float64{56, 56, 65, 65, 50, 25, 87, 44, 35}
-	y = []float64{87, 91, 85, 91, 75, 28, 122, 66, 58}
+	// x = []float64{56, 56, 65, 65, 50, 25, 87, 44, 35}
+	// y = []float64{87, 91, 85, 91, 75, 28, 122, 66, 58}
 	//result should be 0.96...
 
 	if debug {
@@ -166,23 +166,18 @@ func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug boo
 	var eY []*paillier.Ciphertext
 	eY = make([]*paillier.Ciphertext, numRows)
 
-	sumXActual := 0.0
-	sumYActual := 0.0
-
 	for i := 0; i < numRows; i++ {
-
-		sumXActual += x[i]
-		sumYActual += y[i]
-
 		plaintextX := mpc.Pk.EncodeFixedPoint(big.NewFloat(x[i]), mpc.Pk.FPPrecBits)
 		plaintextY := mpc.Pk.EncodeFixedPoint(big.NewFloat(y[i]), mpc.Pk.FPPrecBits)
-
 		eX[i] = mpc.Pk.Encrypt(plaintextX)
 		eY[i] = mpc.Pk.Encrypt(plaintextY)
 	}
 
 	//**************************************************************************************
-	// END [DEALER]
+	//**************************************************************************************
+	// END DEALER CODE
+	//**************************************************************************************
+	//**************************************************************************************
 
 	// keep track of runtime
 	startTime := time.Now()
@@ -292,7 +287,6 @@ func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug boo
 	endTime := time.Now()
 
 	if debug {
-
 		fmt.Printf("PEARSON STATISTIC, p = %s\n", pstat.String())
 		fmt.Println("Runtime: " + endTime.Sub(startTime).String())
 	}
@@ -308,17 +302,19 @@ func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug boo
 
 func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
 
-	// Start dealer code
+	//**************************************************************************************
+	//**************************************************************************************
+	// START DEALER CODE
+	//**************************************************************************************
 	//**************************************************************************************
 	x, y, err := parseDataset(filepath)
-
 	if err != nil {
 		panic(err)
 	}
 
 	// mini test dataset
-	x = []float64{105.0, 119.0, 100.0, 97.0, 96.0, 101.0, 94.0, 95.0, 98.0}
-	y = []float64{96.0, 99.0, 94.0, 89.0, 96.0, 93.0, 88.0, 105.0, 88.0}
+	// x = []float64{105.0, 119.0, 100.0, 97.0, 96.0, 101.0, 94.0, 95.0, 98.0}
+	// y = []float64{96.0, 99.0, 94.0, 89.0, 96.0, 93.0, 88.0, 105.0, 88.0}
 	// result should be 1.99...
 
 	if debug {
@@ -332,20 +328,13 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 	var eY []*paillier.Ciphertext
 	eY = make([]*paillier.Ciphertext, numRows)
 
-	sumXActual := 0.0
-	sumYActual := 0.0
 	var wg sync.WaitGroup
 	for i := 0; i < numRows; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-
-			sumXActual += x[i]
-			sumYActual += y[i]
-
 			plaintextX := mpc.Pk.EncodeFixedPoint(big.NewFloat(x[i]), mpc.Pk.FPPrecBits)
 			plaintextY := mpc.Pk.EncodeFixedPoint(big.NewFloat(y[i]), mpc.Pk.FPPrecBits)
-
 			eX[i] = mpc.Pk.Encrypt(plaintextX)
 			eY[i] = mpc.Pk.Encrypt(plaintextY)
 		}(i)
@@ -354,7 +343,10 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 	wg.Wait()
 
 	//**************************************************************************************
-	// End dealer code
+	//**************************************************************************************
+	// END DEALER CODE
+	//**************************************************************************************
+	//**************************************************************************************
 
 	if debug {
 		fmt.Println("[DEBUG] Finished encrypting dataset")
@@ -378,6 +370,12 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 	meanX := mpc.ECMultFP(sumX, invNumRows)
 	meanY := mpc.ECMultFP(sumY, invNumRows)
 
+	if debug {
+		// sanity check
+		fmt.Printf("[DEBUG] MEAN X: %s\n", mpc.RevealFP(meanX, mpc.Pk.FPPrecBits).String())
+		fmt.Printf("[DEBUG] MEAN Y: %s\n", mpc.RevealFP(meanY, mpc.Pk.FPPrecBits).String())
+	}
+
 	sumsSdX := make([]*paillier.Ciphertext, numRows)
 	sumsSdY := make([]*paillier.Ciphertext, numRows)
 
@@ -394,6 +392,7 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 
 	wg.Wait()
 
+	// compute the standard deviation
 	sdX := e0
 	sdY := e0
 	for i := 0; i < numRows; i++ {
@@ -405,12 +404,6 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 	sdY = mpc.EFPTruncPR(sdY, mpc.Pk.K, mpc.Pk.FPPrecBits)
 	sdX = mpc.ECMultFP(sdX, big.NewFloat(1.0/float64(numRows-1)))
 	sdY = mpc.ECMultFP(sdY, big.NewFloat(1.0/float64(numRows-1)))
-
-	if debug {
-		// sanity check
-		fmt.Printf("[DEBUG] MEAN X: %s\n", mpc.RevealFP(meanX, mpc.Pk.FPPrecBits).String())
-		fmt.Printf("[DEBUG] MEAN Y: %s\n", mpc.RevealFP(meanY, mpc.Pk.FPPrecBits).String())
-	}
 
 	numerator := mpc.Pk.ESub(meanX, meanY)
 	numerator = mpc.EFPMult(numerator, numerator)
