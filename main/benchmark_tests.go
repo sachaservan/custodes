@@ -14,90 +14,109 @@ import (
 	"time"
 )
 
-func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
+func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, int, time.Duration, time.Duration, time.Duration, int) {
 
-	// Start dealer code
 	//**************************************************************************************
-	//x, y, err := parseDataset(filepath)
+	//**************************************************************************************
+	// START DEALER CODE
+	//**************************************************************************************
+	//**************************************************************************************
 
-	// if err != nil {
-	// 	panic(err)
-	// }
+	x, err := parseCategoricalDataset(filepath)
+	if err != nil {
+		panic(err)
+	}
 
-	// mini test dataset
-	x := []float64{29.0, 24.0, 22.0, 19.0, 21.0, 18.0, 19.0, 20.0, 23.0, 18.0, 20.0, 23.0, 29.0, 24.0, 22.0, 19.0, 21.0, 18.0, 19.0, 20.0, 23.0, 18.0, 20.0, 23.0, 29.0, 24.0, 22.0, 19.0, 21.0, 18.0, 19.0, 20.0, 23.0, 18.0, 20.0, 23.0}
+	numCategories := len(x[0])
+	numRows := len(x)
 
-	numAttribs := len(x)
-
-	var eX []*paillier.Ciphertext
-	eX = make([]*paillier.Ciphertext, len(x))
+	var eX [][]*paillier.Ciphertext
+	eX = make([][]*paillier.Ciphertext, numRows)
 
 	var wg sync.WaitGroup
-	for i := 0; i < numAttribs; i++ {
+	for i := 0; i < numRows; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-
-			plaintextX := mpc.Pk.EncodeFixedPoint(big.NewFloat(x[i]), mpc.Pk.FPPrecBits)
-			eX[i] = mpc.Pk.Encrypt(plaintextX)
+			eX[i] = make([]*paillier.Ciphertext, numCategories)
+			for j := 0; j < numCategories; j++ {
+				pt := mpc.Pk.EncodeFixedPoint(big.NewFloat(float64(x[i][j])), mpc.Pk.FPPrecBits)
+				eX[i][j] = mpc.Pk.Encrypt(pt)
+			}
 		}(i)
 	}
 
 	wg.Wait()
 
-	expectedPercentage := make([]*big.Float, numAttribs)
-	for i := 0; i < numAttribs; i++ {
-		expectedPercentage[i] = big.NewFloat(1.0 / float64(numAttribs))
-	}
-
 	//**************************************************************************************
-	// End dealer code
+	//**************************************************************************************
+	// END DEALER CODE
+	//**************************************************************************************
+	//**************************************************************************************
 
 	if debug {
-		fmt.Println("[DEBUG] Finished encrypting dataset")
+		fmt.Println("[DEBUG] Dealer setup done...")
 	}
 
+	// keep track of runtime
 	startTime := time.Now()
 
 	// encryption of zero for init value
-	e0 := mpc.Pk.Encrypt(mpc.Pk.EncodeFixedPoint(big.NewFloat(0.0), mpc.Pk.FPPrecBits))
+	e0 := mpc.Pk.Encrypt(big.NewInt(0))
+
+	// compute encrypted histogram
+	h := make([]*paillier.Ciphertext, numCategories)
+	for i := 0; i < numCategories; i++ {
+		categorySum := e0
+		for j := 0; j < numRows; j++ {
+			categorySum = mpc.Pk.EAdd(categorySum, eX[j][i])
+		}
+
+		h[i] = categorySum
+	}
+
+	// compute expected percentages per category
+	expectedPercentage := make([]*big.Float, numCategories)
+	for i := 0; i < numCategories; i++ {
+		expectedPercentage[i] = big.NewFloat(1.0 / float64(numCategories))
+	}
 
 	// compute the expected value
 	sumTotal := e0
-
-	for i := 0; i < numAttribs; i++ {
-		sumTotal = mpc.Pk.EAdd(sumTotal, eX[i])
+	for i := 0; i < numCategories; i++ {
+		sumTotal = mpc.Pk.EAdd(sumTotal, h[i])
 	}
 
-	expectedValues := make([]*paillier.Ciphertext, numAttribs)
-	for i := 0; i < numAttribs; i++ {
+	fmt.Println(mpc.RevealFP(sumTotal, mpc.Pk.FPPrecBits))
+
+	expectedValues := make([]*paillier.Ciphertext, numCategories)
+	for i := 0; i < numCategories; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			expectedValues[i] = mpc.ECMultFP(sumTotal, expectedPercentage[i])
+			fmt.Println("Expected value i: " + mpc.RevealFP(expectedValues[i], mpc.Pk.FPPrecBits).String())
 		}(i)
 	}
 	wg.Wait()
 
-	residual := make([]*paillier.Ciphertext, numAttribs)
-
-	for i := 0; i < numAttribs; i++ {
-		residual[i] = mpc.Pk.ESub(eX[i], expectedValues[i])
-		residual[i] = mpc.EFPMult(residual[i], residual[i])
+	// compute the residuals
+	residual := make([]*paillier.Ciphertext, numCategories)
+	for i := 0; i < numCategories; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			residual[i] = mpc.Pk.ESub(eX[i], expectedValues[i])
+			residual[i] = mpc.Pk.ESub(h[i], expectedValues[i])
 			residual[i] = mpc.EFPMult(residual[i], residual[i])
 		}(i)
 	}
-
 	wg.Wait()
 
 	endTimePaillier := time.Now()
 
+	// perform division and summation
 	chi2 := mpc.CreateShares(big.NewInt(0))
-	for i := 0; i < numAttribs; i++ {
+	for i := 0; i < numCategories; i++ {
 		residualShare := mpc.PaillierToShare(residual[i])
 		expectedValueShare := mpc.PaillierToShare(expectedValues[i])
 		component := mpc.FPDivision(residualShare, expectedValueShare)
@@ -108,7 +127,7 @@ func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool)
 	endTime := time.Now()
 
 	if debug {
-		fmt.Printf("CHI^2 STATISTIC, chi2 = %f\n", chi2Stat)
+		fmt.Printf("CHI^2 STATISTIC, x2 = %f\n", chi2Stat)
 		log.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
 	}
 
@@ -116,7 +135,7 @@ func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool)
 	divTime := time.Now().Sub(endTimePaillier)
 	paillierTime := endTimePaillier.Sub(startTime)
 
-	return chi2Stat, len(x), totalTime, paillierTime, divTime, mpc.DeleteAllShares()
+	return chi2Stat, numRows, numCategories, totalTime, paillierTime, divTime, mpc.DeleteAllShares()
 }
 
 // Simulation of Pearson's coorelation coefficient
@@ -442,6 +461,43 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 	return tstat, len(x), totalTime, paillierTime, divTime, numShares
 }
 
+func parseCategoricalDataset(file string) ([][]int64, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+
+	defer f.Close()
+
+	csvr := csv.NewReader(f)
+	data := make([][]int64, 0)
+
+	for {
+		row, err := csvr.Read()
+
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+			}
+
+			return data, err
+		}
+
+		values := make([]int64, len(row))
+		for i := 0; i < len(row); i++ {
+			var val int64
+			if val, err = strconv.ParseInt(row[i], 10, 64); err != nil {
+				panic("could not parse dataset")
+			}
+
+			values[i] = val
+		}
+
+		data = append(data, values)
+	}
+
+}
+
 func parseDataset(file string) ([]float64, []float64, error) {
 	f, err := os.Open(file)
 	if err != nil {
@@ -455,14 +511,8 @@ func parseDataset(file string) ([]float64, []float64, error) {
 	data1 := make([]float64, 0)
 	data2 := make([]float64, 0)
 
-	isHeader := true
 	for {
 		row, err := csvr.Read()
-
-		if isHeader {
-			isHeader = false
-			continue
-		}
 		if err != nil {
 			if err == io.EOF {
 				err = nil
@@ -480,9 +530,6 @@ func parseDataset(file string) ([]float64, []float64, error) {
 		if val2, err = strconv.ParseFloat(row[1], 64); err != nil {
 			continue
 		}
-
-		// fmt.Printf("Val is %f", val1)
-		// fmt.Printf("Val is %f", val2)
 
 		data1 = append(data1, val1)
 		data2 = append(data2, val2)

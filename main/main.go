@@ -11,34 +11,17 @@ import (
 func main() {
 	printWelcome()
 
-	// TODO: change accordingly
-	filename := "/home/azuka/Desktop/age_sex.csv"
-
 	runtime.GOMAXPROCS(10000)
+
+	// TODO: change accordingly
+	ROOTDIR := "/home/azuka/go/src/hypocert"
+	filename := ROOTDIR + "/benchmark/benchmark_1000.csv"
+	filenameChiSq := ROOTDIR + "/benchmark/benchmark_chisq_1000_10.csv"
 
 	runBenchmark(filename, 2, 0*time.Millisecond, false, true)
 	runBenchmark(filename, 4, 0*time.Millisecond, false, false)
 	runBenchmark(filename, 8, 0*time.Millisecond, false, false)
 	runBenchmark(filename, 16, 0*time.Millisecond, false, false)
-
-	// FOR QUICK TESTS
-	// params := &hypocert.MPCKeyGenParams{
-	// 	NumParties:      3,
-	// 	Threshold:       2,
-	// 	Verify:          false,
-	// 	KeyBits:         512,
-	// 	MessageBits:     64,
-	// 	SecurityBits:    40,
-	// 	FPPrecisionBits: 20,
-	// 	NetworkLatency:  0}
-
-	// mpc := hypocert.NewMPCKeyGen(params)
-
-	// share0 := mpc.CreateShares(big.NewInt(1095941025))
-	// share1 := mpc.CreateShares(big.NewInt(1173973248))
-	// div := mpc.FPDivision(share0, share1)
-	// fmt.Println("Div: " + mpc.RevealShareFP(div, mpc.Pk.FPPrecBits).String())
-
 }
 
 func runBenchmark(filename string, threshold int, latency time.Duration, zkp bool, debug bool) {
@@ -61,11 +44,11 @@ func runBenchmark(filename string, threshold int, latency time.Duration, zkp boo
 
 	hypocert.MultCountPaillier = 0
 	hypocert.MultCountShares = 0
-	chi2test, numCategories, totalTime, paillierTime, divTime, numSharesCreated := exampleChiSquaredSimulation(mpc, filename, debug)
+	chi2test, numRows, numCategories, totalTime, paillierTime, divTime, numSharesCreated := exampleChiSquaredSimulation(mpc, filename, debug)
 
 	fmt.Println("************************************************")
 	fmt.Println("Chi^2 p-value:                    " + chi2test.String())
-	fmt.Printf("Dataset size:                    N/A")
+	fmt.Printf("Dataset size:                    %d\n", numRows)
 	fmt.Printf("Number of categories:            %d\n", numCategories)
 	fmt.Printf("Number of parties:               %d\n", 2*threshold)
 	//fmt.Printf("Zero-Knowledge Proofs:           %t\n", zkp)
