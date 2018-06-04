@@ -18,8 +18,11 @@ func main() {
 	// 1) CHANGE THE ROOT DIR
 	ROOTDIR := "/home/azuka/go/src/hypocert"
 
-	// 2) SET THE NUMBER OF PARTIES (2, 4, 8, 16)
-	NUMPARTIES := 2
+	// 2) SET THE NUMBER OF PARTIES (2, 4, 8)
+	NUMPARTIES := 2 //x2
+
+	// 3) NETWORK LATENCY
+	NETWORKLATENCY := time.Duration(0) //ms
 
 	/* 1000 row dataset */
 	filename1000 := ROOTDIR + "/benchmark/benchmark_1000.csv"
@@ -63,23 +66,23 @@ func main() {
 
 	/************************************************************************/
 
-	runTTestBechmarks(filename1000, NUMPARTIES, 0*time.Millisecond, false, false)
-	runTTestBechmarks(filename5000, NUMPARTIES, 0*time.Millisecond, false, false)
-	runTTestBechmarks(filename10000, NUMPARTIES, 0*time.Millisecond, false, false)
+	runTTestBechmarks(filename1000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runTTestBechmarks(filename5000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runTTestBechmarks(filename10000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
 
-	runPearsonsBechmarks(filename1000, NUMPARTIES, 0*time.Millisecond, false, false)
-	runPearsonsBechmarks(filename5000, NUMPARTIES, 0*time.Millisecond, false, false)
-	runPearsonsBechmarks(filename10000, NUMPARTIES, 0*time.Millisecond, false, false)
+	runPearsonsBechmarks(filename1000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runPearsonsBechmarks(filename5000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runPearsonsBechmarks(filename10000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
 
-	runChiSqBechmarks(filenameChiSq1000_10, NUMPARTIES, 0*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq1000_25, NUMPARTIES, 0*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq1000_50, NUMPARTIES, 0*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq5000_10, NUMPARTIES, 0*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq5000_25, NUMPARTIES, 0*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq5000_50, NUMPARTIES, 0*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq10000_10, NUMPARTIES, 0*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq10000_25, NUMPARTIES, 0*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq10000_50, NUMPARTIES, 0*time.Millisecond, false, false)
+	runChiSqBechmarks(filenameChiSq1000_10, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runChiSqBechmarks(filenameChiSq1000_25, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runChiSqBechmarks(filenameChiSq1000_50, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runChiSqBechmarks(filenameChiSq5000_10, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runChiSqBechmarks(filenameChiSq5000_25, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runChiSqBechmarks(filenameChiSq5000_50, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runChiSqBechmarks(filenameChiSq10000_10, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runChiSqBechmarks(filenameChiSq10000_25, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
+	runChiSqBechmarks(filenameChiSq10000_50, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
 
 	runMultBenchmark(NUMPARTIES, 0*time.Millisecond, false, false)
 
