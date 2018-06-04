@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"hypocert"
+	"hypocertnode"
 	"io"
 	"log"
 	"math/big"
@@ -87,15 +88,12 @@ func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool)
 		sumTotal = mpc.Pk.EAdd(sumTotal, h[i])
 	}
 
-	fmt.Println(mpc.RevealFP(sumTotal, mpc.Pk.FPPrecBits))
-
 	expectedValues := make([]*paillier.Ciphertext, numCategories)
 	for i := 0; i < numCategories; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			expectedValues[i] = mpc.ECMultFP(sumTotal, expectedPercentage[i])
-			fmt.Println("Expected value i: " + mpc.RevealFP(expectedValues[i], mpc.Pk.FPPrecBits).String())
+			expectedValues[i] = mpc.ECMult(sumTotal, mpc.EncodeFixedPoint(expectedPercentage[i], mpc.Pk.FPPrecBits))
 		}(i)
 	}
 	wg.Wait()
@@ -115,12 +113,23 @@ func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool)
 	endTimePaillier := time.Now()
 
 	// perform division and summation
+	xi := make([]*node.Share, numCategories)
+	for i := 0; i < numCategories; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			residualShare := mpc.PaillierToShare(residual[i])
+			residualShare = mpc.TruncPR(residualShare, 2*mpc.Pk.K, 2*mpc.Pk.FPPrecBits)
+			expectedValueShare := mpc.PaillierToShare(expectedValues[i])
+			expectedValueShare = mpc.TruncPR(expectedValueShare, mpc.Pk.K, mpc.Pk.FPPrecBits)
+			xi[i] = mpc.FPDivision(residualShare, expectedValueShare)
+		}(i)
+	}
+	wg.Wait()
+
 	chi2 := mpc.CreateShares(big.NewInt(0))
 	for i := 0; i < numCategories; i++ {
-		residualShare := mpc.PaillierToShare(residual[i])
-		expectedValueShare := mpc.PaillierToShare(expectedValues[i])
-		component := mpc.FPDivision(residualShare, expectedValueShare)
-		chi2 = mpc.Add(chi2, component)
+		chi2 = mpc.Add(chi2, xi[i])
 	}
 
 	chi2Stat := mpc.RevealShareFP(chi2, mpc.Pk.FPPrecBits)
@@ -236,9 +245,9 @@ func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug boo
 	}
 
 	// adjust the prec after mult
-	sumXY = mpc.EFPTruncPR(sumXY, mpc.Pk.K, mpc.Pk.FPPrecBits)
-	sumDevX2 = mpc.EFPTruncPR(sumDevX2, mpc.Pk.K, mpc.Pk.FPPrecBits)
-	sumDevY2 = mpc.EFPTruncPR(sumDevY2, mpc.Pk.K, mpc.Pk.FPPrecBits)
+	sumXY = mpc.ETruncPR(sumXY, mpc.Pk.K, mpc.Pk.FPPrecBits)
+	sumDevX2 = mpc.ETruncPR(sumDevX2, mpc.Pk.K, mpc.Pk.FPPrecBits)
+	sumDevY2 = mpc.ETruncPR(sumDevY2, mpc.Pk.K, mpc.Pk.FPPrecBits)
 
 	// compute the numerator = [sum for all i (x_i - mean_x)(y_i - mean_y)]
 	numerator := sumXY
@@ -400,8 +409,8 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 		sdY = mpc.Pk.EAdd(sdY, sumsSdY[i])
 	}
 
-	sdX = mpc.EFPTruncPR(sdX, mpc.Pk.K, mpc.Pk.FPPrecBits)
-	sdY = mpc.EFPTruncPR(sdY, mpc.Pk.K, mpc.Pk.FPPrecBits)
+	sdX = mpc.ETruncPR(sdX, mpc.Pk.K, mpc.Pk.FPPrecBits)
+	sdY = mpc.ETruncPR(sdY, mpc.Pk.K, mpc.Pk.FPPrecBits)
 	sdX = mpc.ECMultFP(sdX, big.NewFloat(1.0/float64(numRows-1)))
 	sdY = mpc.ECMultFP(sdY, big.NewFloat(1.0/float64(numRows-1)))
 

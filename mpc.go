@@ -324,7 +324,7 @@ func (mpc *MPC) EMult(a, b *paillier.Ciphertext) *paillier.Ciphertext {
 func (mpc *MPC) ECMultFP(ct *paillier.Ciphertext, fp *big.Float) *paillier.Ciphertext {
 	e := mpc.Pk.EncodeFixedPoint(fp, mpc.Pk.FPPrecBits)
 	m := new(big.Int).Exp(ct.C, e, mpc.Pk.GetNSquare())
-	return mpc.EFPTruncPR(&paillier.Ciphertext{m}, mpc.Pk.K, mpc.Pk.FPPrecBits)
+	return mpc.ETruncPR(&paillier.Ciphertext{m}, mpc.Pk.K, mpc.Pk.FPPrecBits)
 }
 
 func (mpc *MPC) ECMult(ct *paillier.Ciphertext, c *big.Int) *paillier.Ciphertext {
@@ -341,7 +341,7 @@ func (mpc *MPC) EFPMult(a, b *paillier.Ciphertext) *paillier.Ciphertext {
 	res := mpc.Pk.ECMult(a, rev)
 	res = mpc.Pk.ESub(res, val)
 
-	res = mpc.EFPTruncPR(res, mpc.Pk.K, mpc.Pk.FPPrecBits)
+	res = mpc.ETruncPR(res, mpc.Pk.K, mpc.Pk.FPPrecBits)
 
 	return res
 }
@@ -389,21 +389,21 @@ func (mpc *MPC) RevealFP(ciphertext *paillier.Ciphertext, scale int) *big.Float 
 	return fp
 }
 
-//EBitsTruncPR truncates a bitwise sharing where the last bit is
+//ETruncPR truncates a bitwise sharing where the last bit is
 // probabilistically rounded up or down
-func (mpc *MPC) EFPTruncPR(a *paillier.Ciphertext, k, m int) *paillier.Ciphertext {
+func (mpc *MPC) ETruncPR(a *paillier.Ciphertext, k, m int) *paillier.Ciphertext {
 
 	// get 2^k-1 + a
 	b := mpc.Pk.Encrypt(big.NewInt(0).Exp(big2, big.NewInt(int64(k-1)), nil))
 	b = mpc.Pk.EAdd(b, a)
 
 	// 2^m
-	big2m := big.NewInt(0).Exp(big2, big.NewInt(int64(m)), nil)
+	big2m := big.NewInt(0).Exp(big2, big.NewInt(int64(m-1)), nil)
 	big2mInv := big.NewInt(0).ModInverse(big2m, mpc.Pk.N)
 
 	// get solved bits
-	//_, r, _ := mpc.ESolvedBits(m)
-	r := mpc.ERandom(big.NewInt(0).Div(big2m, big.NewInt(int64(len(mpc.Parties)))))
+	_, r, _ := mpc.ESolvedBits(m)
+	//r := mpc.ERandom(big.NewInt(0).Div(big2m, big.NewInt(int64(len(mpc.Parties)))))
 
 	exp := big.NewInt(0).Exp(big2, big.NewInt(int64(mpc.Pk.S+k-m)), nil)
 	rnd := mpc.ERandom(exp)
@@ -516,8 +516,8 @@ func (mpc *MPC) ERandomAndShare(bound *big.Int) (*paillier.Ciphertext, *node.Sha
 
 func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 
-	//nu := big.NewInt(0).Binomial(int64(params.NumParties), int64(params.Threshold)).Int64()
-	if int64(params.MessageBits+params.SecurityBits+params.FPPrecisionBits) >= int64(2*params.KeyBits) {
+	nu := int(math.Log2(float64(params.NumParties)))
+	if int64(params.MessageBits+params.SecurityBits+params.FPPrecisionBits+nu+1) >= int64(2*params.KeyBits) {
 		panic("modulus not big enough for given parameters")
 	}
 
@@ -525,7 +525,7 @@ func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 		panic("message space is smaller than the precision")
 	}
 
-	shareModulusBits := 2*params.KeyBits + 1
+	shareModulusBits := 2*params.KeyBits + nu
 
 	tkh := paillier.GetThresholdKeyGenerator(params.KeyBits, params.NumParties, params.Threshold, rand.Reader)
 	tpks, err := tkh.Generate()

@@ -62,7 +62,7 @@ func main() {
 
 	/************************************************************************/
 
-	runBenchmark(filename, filenameChiSq, 2, 0*time.Millisecond, false, true)
+	runBenchmark(filename, filenameChiSq, 2, 0*time.Millisecond, false, false)
 	runBenchmark(filename, filenameChiSq, 4, 0*time.Millisecond, false, false)
 	runBenchmark(filename, filenameChiSq, 8, 0*time.Millisecond, false, false)
 	runBenchmark(filename, filenameChiSq, 16, 0*time.Millisecond, false, false)
@@ -77,7 +77,7 @@ func runBenchmark(filename string, filenameChiSq string, threshold int, latency 
 		KeyBits:         512,
 		MessageBits:     84,
 		SecurityBits:    40,
-		FPPrecisionBits: 40,
+		FPPrecisionBits: 20,
 		NetworkLatency:  latency}
 
 	mpc := hypocert.NewMPCKeyGen(params)
@@ -92,24 +92,24 @@ func runBenchmark(filename string, filenameChiSq string, threshold int, latency 
 	//**************************************************************************************
 	//**************************************************************************************
 
-	hypocert.MultCountPaillier = 0
-	hypocert.MultCountShares = 0
-	chi2test, numRows, numCategories, totalTime, paillierTime, divTime, numSharesCreated := exampleChiSquaredSimulation(mpc, filenameChiSq, debug)
+	// hypocert.MultCountPaillier = 0
+	// hypocert.MultCountShares = 0
+	// chi2test, numRows, numCategories, totalTime, paillierTime, divTime, numSharesCreated := exampleChiSquaredSimulation(mpc, filenameChiSq, debug)
 
-	fmt.Println("************************************************")
-	fmt.Println("Chi^2 p-value:                    " + chi2test.String())
-	fmt.Printf("Dataset size:                    %d\n", numRows)
-	fmt.Printf("Number of categories:            %d\n", numCategories)
-	fmt.Printf("Number of parties:               %d\n", 2*threshold)
-	//fmt.Printf("Zero-Knowledge Proofs:           %t\n", zkp)
-	fmt.Printf("Total number of shares:          %d\n", numSharesCreated)
-	fmt.Printf("Total number of Paillier Mults:  %d\n", hypocert.MultCountPaillier)
-	fmt.Printf("Total number of Share Mults:     %d\n", hypocert.MultCountShares)
-	fmt.Printf("Chi^2 Test runtime (s):     %f\n", totalTime.Seconds())
-	fmt.Printf("  Computation runtime (s):  %f\n", paillierTime.Seconds())
-	fmt.Printf("  Division runtime (s):     %f\n", divTime.Seconds())
+	// fmt.Println("************************************************")
+	// fmt.Println("Chi^2 p-value:                    " + chi2test.String())
+	// fmt.Printf("Dataset size:                    %d\n", numRows)
+	// fmt.Printf("Number of categories:            %d\n", numCategories)
+	// fmt.Printf("Number of parties:               %d\n", 2*threshold)
+	// //fmt.Printf("Zero-Knowledge Proofs:           %t\n", zkp)
+	// fmt.Printf("Total number of shares:          %d\n", numSharesCreated)
+	// fmt.Printf("Total number of Paillier Mults:  %d\n", hypocert.MultCountPaillier)
+	// fmt.Printf("Total number of Share Mults:     %d\n", hypocert.MultCountShares)
+	// fmt.Printf("Chi^2 Test runtime (s):     %f\n", totalTime.Seconds())
+	// fmt.Printf("  Computation runtime (s):  %f\n", paillierTime.Seconds())
+	// fmt.Printf("  Division runtime (s):     %f\n", divTime.Seconds())
 
-	fmt.Println("************************************************")
+	// fmt.Println("************************************************")
 
 	//**************************************************************************************
 	//**************************************************************************************
