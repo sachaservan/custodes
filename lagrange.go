@@ -2,7 +2,12 @@ package hypocert
 
 import (
 	"math/big"
+	"sync"
 )
+
+// store lagrange polynomials to avoid recalculations
+var funcORCoefficientCache sync.Map
+var funcXORCoefficientCache sync.Map
 
 func neg(a *big.Int, modulus *big.Int) *big.Int {
 	return big.NewInt(0).Sub(modulus, a)
@@ -89,6 +94,16 @@ func funcORInterpolation(n int, modulus *big.Int) []*big.Int {
 // compute the lagrange interpolation of the function such that
 // f(1) = 1, f(2) = 0,  f(3) = 1,  f(4) = 0 ...
 func funcXORInterpolation(n int, modulus *big.Int) []*big.Int {
+
+	if value, found := funcXORCoefficientCache.Load(n); found {
+		if v, ok := value.([]*big.Int); ok {
+			out := make([]*big.Int, n+1)
+			for i := 0; i <= n; i++ {
+				out[i] = big.NewInt(0).Set(v[i])
+			}
+			return out
+		}
+	}
 
 	var numerator []*big.Int
 	var poly []*big.Int

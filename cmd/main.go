@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"hypocert"
 	"math/big"
@@ -13,94 +14,105 @@ func main() {
 
 	runtime.GOMAXPROCS(10000)
 
-	// TO RUN BENCHMARKS:
+	// Command line arguments
+	rootDirCmd := flag.String("rootdir", "", "full path to project dir.")
+	numPartiesCmd := flag.Int("parties", 3, "integer number of parties >= 3.")
+	thresholdCmd := flag.Int("threshold", 2, "integer number of parties >= 2.")
+	networkLatencyCmd := flag.Int("netlat", 0, "average network latency for party communication.")
+	debugCmd := flag.Bool("debug", false, "print debug statements during computation.")
 
-	// 1) CHANGE THE ROOT DIR
-	ROOTDIR := "/home/azuka/go/src/hypocert"
+	flag.Parse()
 
-	// 2) SET THE NUMBER OF PARTIES (2, 4, 8)
-	NUMPARTIES := 2 //x2
+	rootDir := *rootDirCmd
+	numParties := *numPartiesCmd
+	threshold := *thresholdCmd
+	networkLatency := time.Duration(*networkLatencyCmd)
+	debug := *debugCmd
 
-	// 3) NETWORK LATENCY
-	NETWORKLATENCY := time.Duration(0) //ms
+	if numParties < 2*threshold-1 {
+		panic("Threshold is too high compared to the number of parties!")
+	}
 
-	/* 1000 row dataset */
-	filename1000 := ROOTDIR + "/benchmark/benchmark_1000.csv"
-
-	/* 1000 row dataset, 10 categories */
-	filenameChiSq1000_10 := ROOTDIR + "/benchmark/benchmark_chisq_1000_10.csv"
-
-	/* 1000 row dataset, 25 categories */
-	filenameChiSq1000_25 := ROOTDIR + "/benchmark/benchmark_chisq_1000_25.csv"
-
-	/* 1000 row dataset, 50 categories */
-	filenameChiSq1000_50 := ROOTDIR + "/benchmark/benchmark_chisq_1000_50.csv"
-
-	/************************************************************************/
-
-	/* 5000 row dataset */
-	filename5000 := ROOTDIR + "/benchmark/benchmark_5000.csv"
-
-	/* 5000 row dataset, 10 categories */
-	filenameChiSq5000_10 := ROOTDIR + "/benchmark/benchmark_chisq_5000_10.csv"
-
-	/* 5000 row dataset, 25 categories */
-	filenameChiSq5000_25 := ROOTDIR + "/benchmark/benchmark_chisq_5000_25.csv"
-
-	/* 5000 row dataset, 50 categories */
-	filenameChiSq5000_50 := ROOTDIR + "/benchmark/benchmark_chisq_5000_50.csv"
-
-	/************************************************************************/
-
-	/* 10000 row dataset */
-	filename10000 := ROOTDIR + "/benchmark/benchmark_10000.csv"
-
-	/* 10000 row dataset, 10 categories */
-	filenameChiSq10000_10 := ROOTDIR + "/benchmark/benchmark_chisq_10000_10.csv"
-
-	/* 10000 row dataset, 25 categories */
-	filenameChiSq10000_25 := ROOTDIR + "/benchmark/benchmark_chisq_10000_25.csv"
-
-	/* 10000 row dataset, 50 categories */
-	filenameChiSq10000_50 := ROOTDIR + "/benchmark/benchmark_chisq_10000_50.csv"
-
-	/************************************************************************/
-
-	runTTestBechmarks(filename1000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runTTestBechmarks(filename5000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runTTestBechmarks(filename10000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-
-	runPearsonsBechmarks(filename1000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runPearsonsBechmarks(filename5000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runPearsonsBechmarks(filename10000, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-
-	runChiSqBechmarks(filenameChiSq1000_10, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq1000_25, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq1000_50, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq5000_10, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq5000_25, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq5000_50, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq10000_10, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq10000_25, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-	runChiSqBechmarks(filenameChiSq10000_50, NUMPARTIES, NETWORKLATENCY*time.Millisecond, false, false)
-
-	runMultBenchmark(NUMPARTIES, 0*time.Millisecond, false, false)
-
-}
-
-func runChiSqBechmarks(filename string, threshold int, latency time.Duration, zkp bool, debug bool) {
-
+	fmt.Print("Generating keys...")
 	params := &hypocert.MPCKeyGenParams{
-		NumParties:      2 * threshold,
+		NumParties:      2 * numParties,
 		Threshold:       threshold,
-		Verify:          zkp,
+		Verify:          false,
 		KeyBits:         512,
 		MessageBits:     84,
 		SecurityBits:    40,
 		FPPrecisionBits: 20,
-		NetworkLatency:  latency}
+		NetworkLatency:  networkLatency}
 
 	mpc := hypocert.NewMPCKeyGen(params)
+
+	fmt.Println("done.")
+
+	/* 1000 row dataset */
+	filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
+
+	/* 1000 row dataset, 10 categories */
+	filenameChiSq1000_10 := rootDir + "/benchmark/benchmark_chisq_1000_10.csv"
+
+	/* 1000 row dataset, 25 categories */
+	filenameChiSq1000_25 := rootDir + "/benchmark/benchmark_chisq_1000_25.csv"
+
+	/* 1000 row dataset, 50 categories */
+	filenameChiSq1000_50 := rootDir + "/benchmark/benchmark_chisq_1000_50.csv"
+
+	/************************************************************************/
+
+	/* 5000 row dataset */
+	filename5000 := rootDir + "/benchmark/benchmark_5000.csv"
+
+	/* 5000 row dataset, 10 categories */
+	filenameChiSq5000_10 := rootDir + "/benchmark/benchmark_chisq_5000_10.csv"
+
+	/* 5000 row dataset, 25 categories */
+	filenameChiSq5000_25 := rootDir + "/benchmark/benchmark_chisq_5000_25.csv"
+
+	/* 5000 row dataset, 50 categories */
+	filenameChiSq5000_50 := rootDir + "/benchmark/benchmark_chisq_5000_50.csv"
+
+	/************************************************************************/
+
+	/* 10000 row dataset */
+	filename10000 := rootDir + "/benchmark/benchmark_10000.csv"
+
+	/* 10000 row dataset, 10 categories */
+	filenameChiSq10000_10 := rootDir + "/benchmark/benchmark_chisq_10000_10.csv"
+
+	/* 10000 row dataset, 25 categories */
+	filenameChiSq10000_25 := rootDir + "/benchmark/benchmark_chisq_10000_25.csv"
+
+	/* 10000 row dataset, 50 categories */
+	filenameChiSq10000_50 := rootDir + "/benchmark/benchmark_chisq_10000_50.csv"
+
+	/************************************************************************/
+
+	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, debug)
+	runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, debug)
+	runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, debug)
+
+	runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, debug)
+	runPearsonsBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, debug)
+	runPearsonsBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, debug)
+
+	runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, false, debug)
+	runChiSqBechmarks(mpc, filenameChiSq1000_25, numParties, networkLatency*time.Millisecond, false, debug)
+	runChiSqBechmarks(mpc, filenameChiSq1000_50, numParties, networkLatency*time.Millisecond, false, debug)
+	runChiSqBechmarks(mpc, filenameChiSq5000_10, numParties, networkLatency*time.Millisecond, false, debug)
+	runChiSqBechmarks(mpc, filenameChiSq5000_25, numParties, networkLatency*time.Millisecond, false, debug)
+	runChiSqBechmarks(mpc, filenameChiSq5000_50, numParties, networkLatency*time.Millisecond, false, debug)
+	runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, debug)
+	runChiSqBechmarks(mpc, filenameChiSq10000_25, numParties, networkLatency*time.Millisecond, false, debug)
+	runChiSqBechmarks(mpc, filenameChiSq10000_50, numParties, networkLatency*time.Millisecond, false, debug)
+
+	runMultBenchmark(mpc, numParties, networkLatency*time.Millisecond, false, debug)
+
+}
+
+func runChiSqBechmarks(mpc *hypocert.MPC, filename string, threshold int, latency time.Duration, zkp bool, debug bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -125,26 +137,14 @@ func runChiSqBechmarks(filename string, threshold int, latency time.Duration, zk
 	fmt.Printf("Total number of shares:          %d\n", numSharesCreated)
 	fmt.Printf("Total number of Paillier Mults:  %d\n", hypocert.MultCountPaillier)
 	fmt.Printf("Total number of Share Mults:     %d\n", hypocert.MultCountShares)
-	fmt.Printf("Chi^2 Test runtime (s):     %f\n", totalTime.Seconds())
-	fmt.Printf("  Computation runtime (s):  %f\n", paillierTime.Seconds())
-	fmt.Printf("  Division runtime (s):     %f\n", divTime.Seconds())
-
+	fmt.Printf("Chi^2 Test runtime (s):          %f\n", totalTime.Seconds())
+	fmt.Printf("  Computation runtime (s):       %f\n", paillierTime.Seconds())
+	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
+	fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 	fmt.Println("************************************************")
 }
 
-func runTTestBechmarks(filename string, threshold int, latency time.Duration, zkp bool, debug bool) {
-
-	params := &hypocert.MPCKeyGenParams{
-		NumParties:      2 * threshold,
-		Threshold:       threshold,
-		Verify:          zkp,
-		KeyBits:         512,
-		MessageBits:     84,
-		SecurityBits:    40,
-		FPPrecisionBits: 20,
-		NetworkLatency:  latency}
-
-	mpc := hypocert.NewMPCKeyGen(params)
+func runTTestBechmarks(mpc *hypocert.MPC, filename string, threshold int, latency time.Duration, zkp bool, debug bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -171,23 +171,12 @@ func runTTestBechmarks(filename string, threshold int, latency time.Duration, zk
 	fmt.Printf("T-Test runtime (s): 	         %f\n", totalTime.Seconds())
 	fmt.Printf("  Computation runtime (s):       %f\n", paillierTime.Seconds())
 	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
+	fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 	fmt.Println("************************************************")
 
 }
 
-func runPearsonsBechmarks(filename string, threshold int, latency time.Duration, zkp bool, debug bool) {
-
-	params := &hypocert.MPCKeyGenParams{
-		NumParties:      2 * threshold,
-		Threshold:       threshold,
-		Verify:          zkp,
-		KeyBits:         512,
-		MessageBits:     84,
-		SecurityBits:    40,
-		FPPrecisionBits: 20,
-		NetworkLatency:  latency}
-
-	mpc := hypocert.NewMPCKeyGen(params)
+func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, threshold int, latency time.Duration, zkp bool, debug bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -214,24 +203,12 @@ func runPearsonsBechmarks(filename string, threshold int, latency time.Duration,
 	fmt.Printf("Pearson's Test runtime (s):      %f\n", totalTime.Seconds())
 	fmt.Printf("  Computation runtime (s):       %f\n", paillierTime.Seconds())
 	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
-
+	fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 	fmt.Println("************************************************")
 
 }
 
-func runMultBenchmark(threshold int, latency time.Duration, zkp bool, debug bool) {
-
-	params := &hypocert.MPCKeyGenParams{
-		NumParties:      2 * threshold,
-		Threshold:       threshold,
-		Verify:          zkp,
-		KeyBits:         512,
-		MessageBits:     84,
-		SecurityBits:    40,
-		FPPrecisionBits: 20,
-		NetworkLatency:  latency}
-
-	mpc := hypocert.NewMPCKeyGen(params)
+func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, zkp bool, debug bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -265,8 +242,10 @@ func runMultBenchmark(threshold int, latency time.Duration, zkp bool, debug bool
 		multTimeShares += endTime.Sub(stime)
 	}
 
-	fmt.Printf("Paillier MULT time: %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0))
-	fmt.Printf("Shares MULT time:   %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0))
+	fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0))
+	fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0))
+	fmt.Printf("Network latency (s):  %d\n", latency.Seconds())
+
 }
 
 func printWelcome() {

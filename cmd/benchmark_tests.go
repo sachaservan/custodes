@@ -4,15 +4,17 @@ import (
 	"encoding/csv"
 	"fmt"
 	"hypocert"
-	"hypocertnode"
 	"io"
 	"log"
 	"math/big"
 	"os"
-	"paillier"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/sachaservan/paillier"
+
+	"hypocert/node"
 )
 
 func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, int, time.Duration, time.Duration, time.Duration, int) {
