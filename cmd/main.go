@@ -1,30 +1,30 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"hypocert"
+	"io/ioutil"
 	"math/big"
 	"runtime"
+	"strconv"
 	"time"
-    "encoding/json"
-    "io/ioutil"
-    "strconv"
 )
 
 type Report struct {
-    TestType string
-    PValue float64 
-    DatasetSize int 
-    NumberOfCategories int 
-    NumberOfParties int 
-    TotalNumberOfShares int 
-    TotalNumberOfPaillierMults int 
-    TotalNumberOfShareMults int 
-    TotalTime float64
-    ComputationTime float64 
-    DivisionTime float64
-    Latency float64
+	TestType                   string
+	PValue                     float64
+	DatasetSize                int
+	NumberOfCategories         int
+	NumberOfParties            int
+	TotalNumberOfShares        int
+	TotalNumberOfPaillierMults int
+	TotalNumberOfShareMults    int
+	TotalTime                  float64
+	ComputationTime            float64
+	DivisionTime               float64
+	Latency                    float64
 }
 
 func main() {
@@ -53,7 +53,7 @@ func main() {
 
 	fmt.Print("Generating keys...")
 	params := &hypocert.MPCKeyGenParams{
-		NumParties:      2 * numParties,
+		NumParties:      numParties,
 		Threshold:       threshold,
 		Verify:          false,
 		KeyBits:         512,
@@ -151,6 +151,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	fmt.Printf("Dataset size:                    %d\n", datasetSize)
 	fmt.Printf("Number of categories:            %d\n", numCategories)
 	fmt.Printf("Number of parties:               %d\n", numParties)
+	fmt.Printf("Threshold:                       %d\n", mpc.Threshold)
 	//fmt.Printf("Zero-Knowledge Proofs:           %t\n", zkp)
 	fmt.Printf("Total number of shares:          %d\n", numSharesCreated)
 	fmt.Printf("Total number of Paillier Mults:  %d\n", hypocert.MultCountPaillier)
@@ -160,30 +161,30 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
 	fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 	fmt.Println("************************************************")
-    
-    pvalue, _ := chi2test.Float64()
-    
-    r := Report{
-        TestType: "CHI2",
-        PValue: pvalue,
-        DatasetSize: datasetSize,
-        NumberOfCategories: numCategories,
-        NumberOfParties: numParties,
-        TotalNumberOfShares: numSharesCreated,
-        TotalNumberOfPaillierMults:  hypocert.MultCountPaillier,
-        TotalNumberOfShareMults: hypocert.MultCountShares,
-        TotalTime: totalTime.Seconds(),
-        ComputationTime: paillierTime.Seconds(),
-        DivisionTime: divTime.Seconds(),
-        Latency: latency.Seconds()}
-        
-    reportJson, _ := json.MarshalIndent(r, "", "\t")
-    err := ioutil.WriteFile(r.TestType + "_" + strconv.Itoa(datasetSize) + "_" + strconv.Itoa(numParties) + "_" + strconv.Itoa(numCategories) + ".json", reportJson, 0644)        
-    
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
+
+	pvalue, _ := chi2test.Float64()
+
+	r := Report{
+		TestType:                   "CHI2",
+		PValue:                     pvalue,
+		DatasetSize:                datasetSize,
+		NumberOfCategories:         numCategories,
+		NumberOfParties:            numParties,
+		TotalNumberOfShares:        numSharesCreated,
+		TotalNumberOfPaillierMults: hypocert.MultCountPaillier,
+		TotalNumberOfShareMults:    hypocert.MultCountShares,
+		TotalTime:                  totalTime.Seconds(),
+		ComputationTime:            paillierTime.Seconds(),
+		DivisionTime:               divTime.Seconds(),
+		Latency:                    latency.Seconds()}
+
+	reportJson, _ := json.MarshalIndent(r, "", "\t")
+	err := ioutil.WriteFile(r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
 
 func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, debug bool) {
@@ -206,6 +207,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	fmt.Println("T-Test p-value:                   " + ttest.String())
 	fmt.Printf("Dataset size:                    %d\n", datasetSize)
 	fmt.Printf("Number of parties:               %d\n", numParties)
+	fmt.Printf("Threshold:                       %d\n", mpc.Threshold)
 	//fmt.Printf("Zero-Knowledge Proofs:           %t\n", zkp)
 	fmt.Printf("Total number of shares:      	 %d\n", numSharesCreated)
 	fmt.Printf("Total number of Paillier Mults:  %d\n", hypocert.MultCountPaillier)
@@ -215,36 +217,36 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
 	fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 	fmt.Println("************************************************")
-    
-    pvalue, _ := ttest.Float64()
-    
-    r := Report{
-        TestType: "TTEST",
-        PValue: pvalue,
-        DatasetSize: datasetSize,
-        NumberOfCategories: 0,
-        NumberOfParties: numParties,
-        TotalNumberOfShares: numSharesCreated,
-        TotalNumberOfPaillierMults:  hypocert.MultCountPaillier,
-        TotalNumberOfShareMults: hypocert.MultCountShares,
-        TotalTime: totalTime.Seconds(),
-        ComputationTime: paillierTime.Seconds(),
-        DivisionTime: divTime.Seconds(),
-        Latency: latency.Seconds()}
-    
-    numCategories := 0
-    reportJson, err := json.MarshalIndent(r, "", "\t")
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
-    
-    err = ioutil.WriteFile(r.TestType + "_" + strconv.Itoa(datasetSize) + "_" + strconv.Itoa(numParties) + "_" + strconv.Itoa(numCategories) + ".json", reportJson, 0644)        
-    
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
+
+	pvalue, _ := ttest.Float64()
+
+	r := Report{
+		TestType:                   "TTEST",
+		PValue:                     pvalue,
+		DatasetSize:                datasetSize,
+		NumberOfCategories:         0,
+		NumberOfParties:            numParties,
+		TotalNumberOfShares:        numSharesCreated,
+		TotalNumberOfPaillierMults: hypocert.MultCountPaillier,
+		TotalNumberOfShareMults:    hypocert.MultCountShares,
+		TotalTime:                  totalTime.Seconds(),
+		ComputationTime:            paillierTime.Seconds(),
+		DivisionTime:               divTime.Seconds(),
+		Latency:                    latency.Seconds()}
+
+	numCategories := 0
+	reportJson, err := json.MarshalIndent(r, "", "\t")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = ioutil.WriteFile(r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
 
 func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, debug bool) {
@@ -267,6 +269,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 	fmt.Println("Pearson's p-value:                " + ptest.String())
 	fmt.Printf("Dataset size:                    %d\n", datasetSize)
 	fmt.Printf("Number of parties:               %d\n", numParties)
+	fmt.Printf("Threshold:                       %d\n", mpc.Threshold)
 	//fmt.Printf("Zero-Knowledge Proofs:           %t\n", zkp)
 	fmt.Printf("Total number of shares:          %d\n", numSharesCreated)
 	fmt.Printf("Total number of Paillier Mults:  %d\n", hypocert.MultCountPaillier)
@@ -276,31 +279,31 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
 	fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 	fmt.Println("************************************************")
-    
-    pvalue, _ := ptest.Float64()
-    
-    r := Report{
-        TestType: "PEARSON",
-        PValue: pvalue,
-        DatasetSize: datasetSize,
-        NumberOfCategories: 0,
-        NumberOfParties: 2*threshold,
-        TotalNumberOfShares: numSharesCreated,
-        TotalNumberOfPaillierMults:  hypocert.MultCountPaillier,
-        TotalNumberOfShareMults: hypocert.MultCountShares,
-        TotalTime: totalTime.Seconds(),
-        ComputationTime: paillierTime.Seconds(),
-        DivisionTime: divTime.Seconds(),
-        Latency: latency.Seconds()}
-        
-    numCategories := 0    
-    reportJson, _ := json.MarshalIndent(r, "", "\t")
-    err := ioutil.WriteFile(r.TestType + "_" + strconv.Itoa(datasetSize) + "_" + strconv.Itoa(numParties) + "_" + strconv.Itoa(numCategories) + ".json", reportJson, 0644)        
-    
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
+
+	pvalue, _ := ptest.Float64()
+
+	r := Report{
+		TestType:                   "PEARSON",
+		PValue:                     pvalue,
+		DatasetSize:                datasetSize,
+		NumberOfCategories:         0,
+		NumberOfParties:            numParties,
+		TotalNumberOfShares:        numSharesCreated,
+		TotalNumberOfPaillierMults: hypocert.MultCountPaillier,
+		TotalNumberOfShareMults:    hypocert.MultCountShares,
+		TotalTime:                  totalTime.Seconds(),
+		ComputationTime:            paillierTime.Seconds(),
+		DivisionTime:               divTime.Seconds(),
+		Latency:                    latency.Seconds()}
+
+	numCategories := 0
+	reportJson, _ := json.MarshalIndent(r, "", "\t")
+	err := ioutil.WriteFile(r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
 
 func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, zkp bool, debug bool) {
@@ -339,7 +342,7 @@ func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, z
 
 	fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0))
 	fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0))
-	fmt.Printf("Network latency (s):  %d\n", latency.Seconds())
+	fmt.Printf("Network latency (s):  %f\n", latency.Seconds())
 
 }
 
