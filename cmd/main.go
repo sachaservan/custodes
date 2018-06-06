@@ -284,7 +284,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
         PValue: pvalue,
         DatasetSize: datasetSize,
         NumberOfCategories: 0,
-        NumberOfParties: 2*threshold,
+        NumberOfParties: numParties,
         TotalNumberOfShares: numSharesCreated,
         TotalNumberOfPaillierMults:  hypocert.MultCountPaillier,
         TotalNumberOfShareMults: hypocert.MultCountShares,
