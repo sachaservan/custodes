@@ -35,6 +35,7 @@ func main() {
 	// Command line arguments
 	rootDirCmd := flag.String("rootdir", "", "full path to project dir.")
 	numPartiesCmd := flag.Int("parties", 3, "integer number of parties >= 3.")
+	runIdCmd := flag.Int("runid", 0, "integer number for keeping track of the current run.")
 	thresholdCmd := flag.Int("threshold", 2, "integer number of parties >= 2.")
 	networkLatencyCmd := flag.Int("netlat", 0, "average network latency for party communication.")
 	debugCmd := flag.Bool("debug", false, "print debug statements during computation.")
@@ -132,7 +133,7 @@ func main() {
 
 }
 
-func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool) {
+func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool, runId int) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -193,7 +194,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 		Latency:                    latency.Seconds()}
 
 	reportJson, _ := json.MarshalIndent(r, "", "\t")
-	err := ioutil.WriteFile(r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+	err := ioutil.WriteFile(strconv.Itoa(runId)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
 
 	if err != nil {
 		fmt.Println(err)
@@ -201,7 +202,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	}
 }
 
-func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool) {
+func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool, runId int) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -267,7 +268,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 		return
 	}
 
-	err = ioutil.WriteFile(r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+	err = ioutil.WriteFile(strconv.Itoa(runId)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
 
 	if err != nil {
 		fmt.Println(err)
@@ -275,7 +276,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	}
 }
 
-func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool) {
+func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool, runId int) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -335,7 +336,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 
 	numCategories := 0
 	reportJson, _ := json.MarshalIndent(r, "", "\t")
-	err := ioutil.WriteFile(r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+	err := ioutil.WriteFile(strconv.Itoa(runId)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
 
 	if err != nil {
 		fmt.Println(err)
