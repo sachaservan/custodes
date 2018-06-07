@@ -111,23 +111,23 @@ func main() {
 
 	/************************************************************************/
 
-	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 
-	runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runPearsonsBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runPearsonsBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runPearsonsBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runPearsonsBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 
-	runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runChiSqBechmarks(mpc, filenameChiSq1000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runChiSqBechmarks(mpc, filenameChiSq5000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runChiSqBechmarks(mpc, filenameChiSq5000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runChiSqBechmarks(mpc, filenameChiSq5000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runChiSqBechmarks(mpc, filenameChiSq10000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runChiSqBechmarks(mpc, filenameChiSq1000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runChiSqBechmarks(mpc, filenameChiSq5000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runChiSqBechmarks(mpc, filenameChiSq5000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runChiSqBechmarks(mpc, filenameChiSq5000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runChiSqBechmarks(mpc, filenameChiSq10000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 
 	runMultBenchmark(mpc, numParties, networkLatency*time.Millisecond, false, debug)
 
