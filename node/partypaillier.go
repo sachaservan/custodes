@@ -10,7 +10,7 @@ import (
 func (party *Party) GetRandomMultEnc(c *paillier.Ciphertext) (*paillier.Ciphertext, *paillier.Ciphertext) {
 	time.Sleep(party.DebugLatency)
 
-	r := paillier.CryptoRandom(party.Pk.P)
+	r := paillier.CryptoRandom(party.P)
 	enc := party.Pk.Encrypt(r)
 	cMult := party.Pk.ECMult(c, r)
 
