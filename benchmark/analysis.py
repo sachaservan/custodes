@@ -13,6 +13,10 @@ import matplotlib.dates as mdates
 import os.path
 import pickle
 
+def minutes_second_formatter(value, tick_number):
+    m, s = divmod(value, 60)
+    return '%02d:%02d' % (m, s)
+
 sns.set(context='paper', style={'axes.axisbelow': True,
     'axes.edgecolor': '.8',
     'axes.facecolor': 'white',
@@ -38,57 +42,93 @@ sns.set(context='paper', style={'axes.axisbelow': True,
     'ytick.color': '.15',
     'ytick.direction': u'out',
     'ytick.major.size': 0.0,
-    'ytick.minor.size': 0.0}, font_scale = 2)
+    'ytick.minor.size': 0.0}, font_scale = 1.5)
 
 flatui = ['#28aad5', '#b24d94', '#38ae97' ,'#ec7545']
 
 
-def runtime_bar(type, numParties, data):
+def runtime_bar(type, data, shares, show):
     comptime = {}
     divtime = {}
+    
+    numParties = []
+    datasetSizes = []
+    
+    #prefill
     for d in data:
-        if d['TestType'] == type and d['NumberOfParties'] == numParties:
-            if d['DatasetSize'] not in comptime:
-                comptime[d['DatasetSize']] = []
-            comptime[d['DatasetSize']].append(d['ComputationTime'])
+        if d['TestType'] == type and d['UseShares'] == shares:
+            if d['DatasetSize'] not in datasetSizes:
+                datasetSizes.append(d['DatasetSize'])
+                comptime[d['DatasetSize']] = {}
+                divtime[d['DatasetSize']] = {}
+                
+            if d['NumberOfParties'] not in numParties:
+                numParties.append(d['NumberOfParties'])
+                
+            if d['NumberOfParties'] not in comptime[d['DatasetSize']]:
+                comptime[d['DatasetSize']][d['NumberOfParties']] = []
+                divtime[d['DatasetSize']][d['NumberOfParties']] = []               
+       
+    for d in data:
+        if d['TestType'] == type:
+            print(d['DatasetSize'], d['NumberOfParties'])
+            comptime[d['DatasetSize']][d['NumberOfParties']].append(d['ComputationTime'])
+            divtime[d['DatasetSize']][d['NumberOfParties']].append(d['DivisionTime'])
             
-            if d['DatasetSize'] not in divtime:
-                divtime[d['DatasetSize']] = []
-            divtime[d['DatasetSize']].append(d['DivisionTime'])
             
+    width = 0.15    
+    gap = 0.01
+    f, (ax1) = plt.subplots(1, 1, sharey=False, figsize=(6, 4))             
+    numParties = sorted(numParties)
+    datasetSizes = sorted(datasetSizes)
     
-    sorted_keys = sorted(divtime.keys())
-    ind = range(len(sorted_keys))
-    comp = []
-    comp_std = []
-    div = []
-    div_std = []
+    xIndices = len(numParties) * len(datasetSizes)  
+    xTicks = []
+    xLabels = []
+    p1 = None
+    p2 = None
+    for ds, datasetSize in enumerate(datasetSizes):
+        for p, numParty in enumerate(numParties):        
+            mean_comp = np.array(comptime[datasetSize][numParty]).mean() 
+            std_comp = np.array(comptime[datasetSize][numParty]).std()
+            mean_div = np.array(divtime[datasetSize][numParty]).mean()
+            std_div = np.array(divtime[datasetSize][numParty]).std()
+            #current_in
+            total_width = width * len(numParties) + gap * (len(numParties) - 1)
+            pos = (ds - total_width / 2 + width / 2) + width * p + gap * p
+            xTicks.append(pos)
+            if p == (len(numParties) - 1) / 2:
+                xLabels.append(str(numParty) + '\n' + '{:,}'.format(datasetSize))
+            else:
+                xLabels.append(numParty)
+            p1 = ax1.bar(pos, mean_comp, width, yerr=std_comp, color=flatui[0])            
+            p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=std_div, color=flatui[1], hatch='//')
+          
+    plt.xticks(xTicks, xLabels)
+    ax1.xaxis.grid(False)
+    ax1.set_ylabel('time (mm:ss)')
+    ax1.yaxis.set_major_formatter(plt.FuncFormatter(minutes_second_formatter))
+    plt.legend((p1[0], p2[0]), ('computation', 'division'))
     
-    for k in sorted_keys:
-        comp.extend(comptime[k])
-        div.extend(divtime[k])
-        comp_std.append(np.array(comptime[k]).std())
-        div_std.append(np.array(divtime[k]).std())
-    print(comp)
-    width = 0.35
-    p1 = plt.bar(ind, comp, width, yerr=comp_std, color=flatui[0])
-    p2 = plt.bar(ind, div, width, bottom=comp, yerr=div_std, color=flatui[1])
-
-    plt.ylabel('time in seconds')
-    plt.xticks(ind, [str(i) for i in sorted_keys])
-    plt.legend((p1[0], p2[0]), ('Computation Time', 'Division Time'))
-
-    plt.show()    
+    f.savefig('fig/runtime_' + type.lower() + '.pdf', bbox_inches='tight')
+    plt.tight_layout()
+    
+    if show:
+        plt.show()    
+    
             
     
 
 if __name__== "__main__":
+    show = False
+    
     all_runs = []
-    for filename in glob.glob("..\\cmd\\*.json"):
+    for filename in glob.glob("./res/*.json"):
         with open(filename) as f:
             data = json.load(f)
             all_runs.append(data)
             
-    runtime_bar('TTEST', 3, all_runs)
+    runtime_bar('TTEST', all_runs, false, show)
+    runtime_bar('PEARSON', all_runs, false, show)
         
         
