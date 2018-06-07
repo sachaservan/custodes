@@ -38,6 +38,7 @@ func main() {
 	thresholdCmd := flag.Int("threshold", 2, "integer number of parties >= 2.")
 	networkLatencyCmd := flag.Int("netlat", 0, "average network latency for party communication.")
 	debugCmd := flag.Bool("debug", false, "print debug statements during computation.")
+	useSharesCmd := flag.Bool("shares", false, "use only secret sharing for computations.")
 
 	flag.Parse()
 
@@ -46,6 +47,7 @@ func main() {
 	threshold := *thresholdCmd
 	networkLatency := time.Duration(*networkLatencyCmd)
 	debug := *debugCmd
+	useShares := *useSharesCmd
 
 	if numParties < 2*threshold-1 {
 		panic("Threshold is too high compared to the number of parties!")
@@ -69,68 +71,68 @@ func main() {
 	/* 1000 row dataset */
 	filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
 
+	/* 1000 row dataset, 50 categories */
+	filenameChiSq1000_5 := rootDir + "/benchmark/benchmark_chisq_1000_5.csv"
+
 	/* 1000 row dataset, 10 categories */
 	filenameChiSq1000_10 := rootDir + "/benchmark/benchmark_chisq_1000_10.csv"
 
-	/* 1000 row dataset, 25 categories */
-	filenameChiSq1000_25 := rootDir + "/benchmark/benchmark_chisq_1000_25.csv"
-
-	/* 1000 row dataset, 50 categories */
-	filenameChiSq1000_50 := rootDir + "/benchmark/benchmark_chisq_1000_50.csv"
+	/* 1000 row dataset, 20 categories */
+	filenameChiSq1000_20 := rootDir + "/benchmark/benchmark_chisq_1000_20.csv"
 
 	/************************************************************************/
 
 	/* 5000 row dataset */
 	filename5000 := rootDir + "/benchmark/benchmark_5000.csv"
 
+	/* 5000 row dataset, 5 categories */
+	filenameChiSq5000_5 := rootDir + "/benchmark/benchmark_chisq_5000_5.csv"
+
 	/* 5000 row dataset, 10 categories */
 	filenameChiSq5000_10 := rootDir + "/benchmark/benchmark_chisq_5000_10.csv"
 
-	/* 5000 row dataset, 25 categories */
-	filenameChiSq5000_25 := rootDir + "/benchmark/benchmark_chisq_5000_25.csv"
-
-	/* 5000 row dataset, 50 categories */
-	filenameChiSq5000_50 := rootDir + "/benchmark/benchmark_chisq_5000_50.csv"
+	/* 5000 row dataset, 20 categories */
+	filenameChiSq5000_20 := rootDir + "/benchmark/benchmark_chisq_5000_20.csv"
 
 	/************************************************************************/
 
 	/* 10000 row dataset */
 	filename10000 := rootDir + "/benchmark/benchmark_10000.csv"
 
+	/* 10000 row dataset, 5 categories */
+	filenameChiSq10000_5 := rootDir + "/benchmark/benchmark_chisq_10000_5.csv"
+
 	/* 10000 row dataset, 10 categories */
 	filenameChiSq10000_10 := rootDir + "/benchmark/benchmark_chisq_10000_10.csv"
 
-	/* 10000 row dataset, 25 categories */
-	filenameChiSq10000_25 := rootDir + "/benchmark/benchmark_chisq_10000_25.csv"
-
-	/* 10000 row dataset, 50 categories */
-	filenameChiSq10000_50 := rootDir + "/benchmark/benchmark_chisq_10000_50.csv"
+	/* 10000 row dataset, 20 categories */
+	filenameChiSq10000_20 := rootDir + "/benchmark/benchmark_chisq_10000_20.csv"
 
 	/************************************************************************/
 
-	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, debug)
-	runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, debug)
-	runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, debug)
+	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
 
-	runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, debug)
-	runPearsonsBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, debug)
-	runPearsonsBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, debug)
+	runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runPearsonsBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runPearsonsBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
 
-	runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, false, debug)
-	runChiSqBechmarks(mpc, filenameChiSq1000_25, numParties, networkLatency*time.Millisecond, false, debug)
-	runChiSqBechmarks(mpc, filenameChiSq1000_50, numParties, networkLatency*time.Millisecond, false, debug)
-	runChiSqBechmarks(mpc, filenameChiSq5000_10, numParties, networkLatency*time.Millisecond, false, debug)
-	runChiSqBechmarks(mpc, filenameChiSq5000_25, numParties, networkLatency*time.Millisecond, false, debug)
-	runChiSqBechmarks(mpc, filenameChiSq5000_50, numParties, networkLatency*time.Millisecond, false, debug)
-	runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, debug)
-	runChiSqBechmarks(mpc, filenameChiSq10000_25, numParties, networkLatency*time.Millisecond, false, debug)
-	runChiSqBechmarks(mpc, filenameChiSq10000_50, numParties, networkLatency*time.Millisecond, false, debug)
+	runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runChiSqBechmarks(mpc, filenameChiSq1000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runChiSqBechmarks(mpc, filenameChiSq5000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runChiSqBechmarks(mpc, filenameChiSq5000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runChiSqBechmarks(mpc, filenameChiSq5000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runChiSqBechmarks(mpc, filenameChiSq10000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug)
 
 	runMultBenchmark(mpc, numParties, networkLatency*time.Millisecond, false, debug)
 
 }
 
-func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, debug bool) {
+func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -144,7 +146,19 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 
 	hypocert.MultCountPaillier = 0
 	hypocert.MultCountShares = 0
-	chi2test, datasetSize, numCategories, totalTime, paillierTime, divTime, numSharesCreated := exampleChiSquaredSimulation(mpc, filename, debug)
+	var chi2test *big.Float
+	var datasetSize int
+	var numCategories int
+	var totalTime time.Duration
+	var paillierTime time.Duration
+	var divTime time.Duration
+	var numSharesCreated int
+
+	if onlyUseShares {
+		chi2test, datasetSize, numCategories, totalTime, paillierTime, divTime, numSharesCreated = exampleChiSquaredSimulationWithSecretSharing(mpc, filename, debug)
+	} else {
+		chi2test, datasetSize, numCategories, totalTime, paillierTime, divTime, numSharesCreated = exampleChiSquaredSimulation(mpc, filename, debug)
+	}
 
 	fmt.Println("************************************************")
 	fmt.Println("Chi^2 p-value:                    " + chi2test.String())
@@ -187,7 +201,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	}
 }
 
-func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, debug bool) {
+func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -201,7 +215,19 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 
 	hypocert.MultCountPaillier = 0
 	hypocert.MultCountShares = 0
-	ttest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated := exampleTTestSimulation(mpc, filename, debug)
+
+	var ttest *big.Float
+	var datasetSize int
+	var totalTime time.Duration
+	var paillierTime time.Duration
+	var divTime time.Duration
+	var numSharesCreated int
+
+	if onlyUseShares {
+		ttest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated = exampleTTestSimulationWithSecretSharing(mpc, filename, debug)
+	} else {
+		ttest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated = exampleTTestSimulation(mpc, filename, debug)
+	}
 
 	fmt.Println("************************************************")
 	fmt.Println("T-Test p-value:                   " + ttest.String())
@@ -249,7 +275,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	}
 }
 
-func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, debug bool) {
+func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -263,7 +289,18 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 
 	hypocert.MultCountPaillier = 0
 	hypocert.MultCountShares = 0
-	ptest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated := examplePearsonsTestSimulation(mpc, filename, debug)
+	var ptest *big.Float
+	var datasetSize int
+	var totalTime time.Duration
+	var paillierTime time.Duration
+	var divTime time.Duration
+	var numSharesCreated int
+
+	if onlyUseShares {
+		ptest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated = examplePearsonsTestSimulationWihSecretSharing(mpc, filename, debug)
+	} else {
+		ptest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated = examplePearsonsTestSimulation(mpc, filename, debug)
+	}
 
 	fmt.Println("************************************************")
 	fmt.Println("Pearson's p-value:                " + ptest.String())
