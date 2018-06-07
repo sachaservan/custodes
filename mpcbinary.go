@@ -29,19 +29,19 @@ const (
 func (mpc *MPC) RandomBits(m int) []*node.Share {
 
 	bits := make([]*node.Share, m)
-	twoInv := big.NewInt(0).ModInverse(big.NewInt(2), mpc.Pk.P)
+	twoInv := big.NewInt(0).ModInverse(big.NewInt(2), mpc.P)
 	one := mpc.CreateShares(big.NewInt(1))
 
 	var c *big.Int
 	for i := 0; i < m; i++ {
 
 		for {
-			a := mpc.RandomShare(mpc.Pk.P)
+			a := mpc.RandomShare(mpc.P)
 			a2 := mpc.Mult(a, a)
 			c = mpc.RevealShare(a2)
 			if c.Cmp(big0) != 0 {
-				c.ModSqrt(c, mpc.Pk.P)
-				c.ModInverse(c, mpc.Pk.P)
+				c.ModSqrt(c, mpc.P)
+				c.ModInverse(c, mpc.P)
 				b := mpc.MultC(a, c)
 				b = mpc.Add(b, one)
 				bits[i] = mpc.MultC(b, twoInv)
@@ -70,8 +70,8 @@ func (mpc *MPC) RandomShare(bound *big.Int) *node.Share {
 // in {1...P} and its inverse (mod P)
 func (mpc *MPC) RandomInvertibleShare() (*node.Share, *node.Share, error) {
 
-	a := mpc.RandomShare(mpc.Pk.P)
-	b := mpc.RandomShare(mpc.Pk.P)
+	a := mpc.RandomShare(mpc.P)
+	b := mpc.RandomShare(mpc.P)
 	m := mpc.Mult(a, b)
 	c := mpc.RevealShare(m)
 
@@ -79,7 +79,7 @@ func (mpc *MPC) RandomInvertibleShare() (*node.Share, *node.Share, error) {
 		return nil, nil, errors.New("abort")
 	}
 
-	cInv := big.NewInt(0).ModInverse(c, mpc.Pk.P)
+	cInv := big.NewInt(0).ModInverse(c, mpc.P)
 	aInv := mpc.MultC(b, cInv)
 
 	return a, aInv, nil
@@ -110,7 +110,7 @@ func (mpc *MPC) BitsExp(bits []*node.Share) *node.Share {
 		t2 := mpc.Mult(mpc.Sub(one, bits[i]), one)
 		t2 = mpc.Mult(t2, res)
 		res = mpc.Add(t1, t2)
-		base = base.Exp(base, big.NewInt(2), mpc.Pk.P)
+		base = base.Exp(base, big.NewInt(2), mpc.P)
 	}
 	return res
 }
@@ -140,11 +140,11 @@ func (mpc *MPC) BitsMult(a, b []*node.Share) []*node.Share {
 			resBits = partialSum
 		} else {
 			resBits = mpc.BitsADD(resBits, partialSum)
-			resBits = resBits[0:mpc.Pk.K]
+			resBits = resBits[0:mpc.K]
 		}
 	}
 
-	return resBits[0:mpc.Pk.K]
+	return resBits[0:mpc.K]
 
 }
 
@@ -170,12 +170,12 @@ func (mpc *MPC) BitsDec(a *node.Share, m int) []*node.Share {
 		solvedBits, d, err = mpc.SolvedBits(m)
 	}
 
-	bound := big.NewInt(0).Exp(big2, big.NewInt(int64(mpc.Pk.S+mpc.Pk.K-m)), nil)
+	bound := big.NewInt(0).Exp(big2, big.NewInt(int64(mpc.S+mpc.K-m)), nil)
 	r := mpc.RandomShare(bound)
 	q := mpc.MultC(r, big.NewInt(0).Exp(big2, big.NewInt(int64(m)), nil))
 	r = mpc.Add(q, d)
 
-	max := big.NewInt(0).Exp(big2, big.NewInt(int64(2*mpc.Pk.K+mpc.Pk.S)), nil)
+	max := big.NewInt(0).Exp(big2, big.NewInt(int64(2*mpc.K+mpc.S)), nil)
 
 	// compute 2^(k + s + v) + 2^k + a - r where d is the integer returned from solvedbits
 	maxShare := mpc.CreateShares(max)
@@ -606,7 +606,7 @@ func (mpc *MPC) BitsBigEndian(a *big.Int, n int) []*node.Share {
 // BitsZero returns the n-bit vector of zeros
 func (mpc *MPC) BitsZero() []*node.Share {
 
-	n := mpc.Pk.K
+	n := mpc.K
 	bits := make([]*node.Share, n)
 	zero := mpc.CreateShares(big.NewInt(0))
 
@@ -636,9 +636,9 @@ func (mpc *MPC) symmetricBooleanFunction(bits []*node.Share, f BooleanFunction) 
 
 	var poly []*big.Int
 	if f == BooleanOR {
-		poly = funcORInterpolation(n, mpc.Pk.P)
+		poly = funcORInterpolation(n, mpc.P)
 	} else if f == BooleanXOR {
-		poly = funcXORInterpolation(n, mpc.Pk.P)
+		poly = funcXORInterpolation(n, mpc.P)
 	}
 
 	res := mpc.CreateShares(poly[n])

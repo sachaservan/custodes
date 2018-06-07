@@ -27,9 +27,9 @@ func (mpc *MPC) EMult(a, b *paillier.Ciphertext) *paillier.Ciphertext {
 }
 
 func (mpc *MPC) ECMultFP(ct *paillier.Ciphertext, fp *big.Float) *paillier.Ciphertext {
-	e := mpc.Pk.EncodeFixedPoint(fp, mpc.Pk.FPPrecBits)
+	e := mpc.Pk.EncodeFixedPoint(fp, mpc.FPPrecBits)
 	m := new(big.Int).Exp(ct.C, e, mpc.Pk.GetNSquare())
-	return mpc.ETruncPR(&paillier.Ciphertext{m}, mpc.Pk.K, mpc.Pk.FPPrecBits)
+	return mpc.ETruncPR(&paillier.Ciphertext{m}, mpc.K, mpc.FPPrecBits)
 }
 
 func (mpc *MPC) ECMult(ct *paillier.Ciphertext, c *big.Int) *paillier.Ciphertext {
@@ -46,7 +46,7 @@ func (mpc *MPC) EFPMult(a, b *paillier.Ciphertext) *paillier.Ciphertext {
 	res := mpc.Pk.ECMult(a, rev)
 	res = mpc.Pk.ESub(res, val)
 
-	res = mpc.ETruncPR(res, mpc.Pk.K, mpc.Pk.FPPrecBits)
+	res = mpc.ETruncPR(res, mpc.K, mpc.FPPrecBits)
 
 	return res
 }
@@ -60,14 +60,14 @@ func (mpc *MPC) ETruncPR(a *paillier.Ciphertext, k, m int) *paillier.Ciphertext 
 	b = mpc.Pk.EAdd(b, a)
 
 	// 2^m
-	big2m := big.NewInt(0).Exp(big2, big.NewInt(int64(m-1)), nil)
+	big2m := big.NewInt(0).Exp(big2, big.NewInt(int64(m)), nil)
 	big2mInv := big.NewInt(0).ModInverse(big2m, mpc.Pk.N)
 
 	// get solved bits
 	_, r, _ := mpc.ESolvedBits(m)
 	//r := mpc.ERandom(big.NewInt(0).Div(big2m, big.NewInt(int64(len(mpc.Parties)))))
 
-	exp := big.NewInt(0).Exp(big2, big.NewInt(int64(mpc.Pk.S+k-m)), nil)
+	exp := big.NewInt(0).Exp(big2, big.NewInt(int64(mpc.S+k-m)), nil)
 	rnd := mpc.ERandom(exp)
 
 	// 2^m*rnd + r

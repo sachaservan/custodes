@@ -23,11 +23,15 @@ var big1 *big.Int
 var big0 *big.Int
 
 type MPC struct {
-	Party     *node.Party   // party initiating the requests
-	Parties   []*node.Party // all other parties in the system
-	Threshold int
-	Pk        *paillier.PublicKey
-	Verify    bool
+	Party      *node.Party   // party initiating the requests
+	Parties    []*node.Party // all other parties in the system
+	Threshold  int
+	Pk         *paillier.PublicKey
+	Verify     bool
+	K          int      // message space 2^K < N
+	S          int      // security parameter for statistical secure MPC
+	P          *big.Int // secret share prime
+	FPPrecBits int      // fixed point precision bits
 }
 
 type MPCKeyGenParams struct {
@@ -95,7 +99,7 @@ func (mpc *MPC) ReconstructShare(values []*big.Int) *big.Int {
 		s.Add(s, values[i])
 	}
 
-	return s.Mod(s, mpc.Pk.P)
+	return s.Mod(s, mpc.P)
 }
 func (mpc *MPC) CreateShares(value *big.Int) *node.Share {
 
@@ -182,7 +186,7 @@ func (mpc *MPC) Mult(share1, share2 *node.Share) *node.Share {
 
 func (mpc *MPC) PaillierToShare(ct *paillier.Ciphertext) *node.Share {
 
-	bound := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.Pk.S)), nil)
+	bound := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.S)), nil)
 	r, rshare := mpc.ERandomAndShare(bound)
 	val := mpc.RevealInt(mpc.Pk.EAdd(ct, r))
 	share := mpc.CreateShares(val)
@@ -194,18 +198,18 @@ func (mpc *MPC) PaillierToShare(ct *paillier.Ciphertext) *node.Share {
 // EFPNormalize returns a tuple (b, v) such that a/2^v is between 0.5 and 1
 func (mpc *MPC) FPNormalize(b *node.Share) (*node.Share, *node.Share) {
 
-	bitsa := mpc.ReverseBits(mpc.BitsDec(b, mpc.Pk.K))
+	bitsa := mpc.ReverseBits(mpc.BitsDec(b, mpc.K))
 	ybits := mpc.ReverseBits(mpc.BitsPrefixOR(bitsa))
 
-	for i := 0; i < mpc.Pk.K-1; i++ {
+	for i := 0; i < mpc.K-1; i++ {
 		ybits[i] = mpc.Sub(ybits[i], ybits[i+1])
 	}
 
 	v := mpc.CreateShares(big.NewInt(0))
 
-	pow := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.Pk.K-1)), nil)
+	pow := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.K-1)), nil)
 
-	for i := 0; i < mpc.Pk.K; i++ {
+	for i := 0; i < mpc.K; i++ {
 		t := mpc.MultC(ybits[i], pow)
 		v = mpc.Add(v, t)
 		pow.Div(pow, big.NewInt(2))
@@ -219,7 +223,7 @@ func (mpc *MPC) FPNormalize(b *node.Share) (*node.Share, *node.Share) {
 //EFPReciprocal return an approximation of [1/b]
 func (mpc *MPC) FPReciprocal(b *node.Share) *node.Share {
 
-	a := mpc.CreateShares((mpc.EncodeFixedPoint(big.NewFloat(1.0), mpc.Pk.FPPrecBits)))
+	a := mpc.CreateShares((mpc.EncodeFixedPoint(big.NewFloat(1.0), mpc.FPPrecBits)))
 	return mpc.FPDivision(a, b)
 }
 
@@ -227,8 +231,8 @@ func (mpc *MPC) FPReciprocal(b *node.Share) *node.Share {
 func (mpc *MPC) FPDivision(a, b *node.Share) *node.Share {
 
 	// init goldschmidt constants
-	theta := int(math.Ceil(math.Log2(float64(mpc.Pk.K) / 3.75)))
-	alphaEnc := mpc.CreateShares(mpc.EncodeFixedPoint(big.NewFloat(1.0), mpc.Pk.K))
+	theta := int(math.Ceil(math.Log2(float64(mpc.K) / 3.75)))
+	alphaEnc := mpc.CreateShares(mpc.EncodeFixedPoint(big.NewFloat(1.0), mpc.K))
 
 	w := mpc.initReciprocal(b)
 
@@ -237,27 +241,27 @@ func (mpc *MPC) FPDivision(a, b *node.Share) *node.Share {
 
 	// y = a*w
 	y := mpc.Mult(a, w)
-	y = mpc.TruncPR(y, 2*mpc.Pk.K, mpc.Pk.K/2)
+	y = mpc.TruncPR(y, 2*mpc.K, mpc.K/2)
 
 	for i := 0; i < theta; i++ {
 
 		// y = y * (alpha + x)
 		y = mpc.Mult(y, mpc.Add(alphaEnc, x))
-		y = mpc.TruncPR(y, 2*mpc.Pk.K, mpc.Pk.K)
+		y = mpc.TruncPR(y, 2*mpc.K, mpc.K)
 
 		if i+1 < theta {
 			x = mpc.Mult(x, x)
-			x = mpc.TruncPR(x, 2*mpc.Pk.K, mpc.Pk.K)
+			x = mpc.TruncPR(x, 2*mpc.K, mpc.K)
 		}
 	}
 
-	return mpc.TruncPR(y, 2*mpc.Pk.K, mpc.Pk.K/2-mpc.Pk.FPPrecBits)
+	return mpc.TruncPR(y, 2*mpc.K, mpc.K/2-mpc.FPPrecBits)
 }
 
 func (mpc *MPC) initReciprocal(b *node.Share) *node.Share {
 
 	// init goldschmidt constant
-	alpha := mpc.CreateShares(mpc.EncodeFixedPoint(big.NewFloat(2.9142), mpc.Pk.K))
+	alpha := mpc.CreateShares(mpc.EncodeFixedPoint(big.NewFloat(2.9142), mpc.K))
 
 	// normalize the denominator
 	u, v := mpc.FPNormalize(b)
@@ -269,7 +273,7 @@ func (mpc *MPC) initReciprocal(b *node.Share) *node.Share {
 	w := mpc.Mult(d, v)
 
 	// return the normalize initial approximation
-	t := mpc.TruncPR(w, 2*mpc.Pk.K, mpc.Pk.K)
+	t := mpc.TruncPR(w, 2*mpc.K, mpc.K)
 
 	return t
 }
@@ -282,12 +286,12 @@ func (mpc *MPC) TruncPR(a *node.Share, k, m int) *node.Share {
 
 	// 2^m
 	big2m := big.NewInt(0).Exp(big2, big.NewInt(int64(m)), nil)
-	big2mInv := big.NewInt(0).ModInverse(big2m, mpc.Pk.P)
+	big2mInv := big.NewInt(0).ModInverse(big2m, mpc.P)
 
 	// get solved bits
 	_, r, _ := mpc.SolvedBits(m)
 
-	exp := big.NewInt(0).Exp(big2, big.NewInt(int64(mpc.Pk.S+k-m)), nil)
+	exp := big.NewInt(0).Exp(big2, big.NewInt(int64(mpc.S+k-m)), nil)
 	rnd := mpc.RandomShare(exp)
 
 	// 2^m*rnd + r
@@ -361,18 +365,15 @@ func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 	}
 
 	shareModulusBits := 2*params.KeyBits + nu
+	secretSharePrime, err := rand.Prime(rand.Reader, shareModulusBits)
 
 	tkh := paillier.GetThresholdKeyGenerator(params.KeyBits, params.NumParties, params.Threshold, rand.Reader)
 	tpks, err := tkh.Generate()
 	pk := &tpks[0].PublicKey
-	pk.S = params.SecurityBits
-	pk.K = params.MessageBits
-	pk.P, err = rand.Prime(rand.Reader, shareModulusBits)
+
 	if err != nil {
 		panic("could not generate share prime")
 	}
-
-	pk.FPPrecBits = params.FPPrecisionBits
 
 	if err != nil {
 		panic(err)
@@ -406,18 +407,19 @@ func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 			}
 		}
 
-		denomThreshold.ModInverse(denomThreshold, pk.P)
-		denomFull.ModInverse(denomFull, pk.P)
+		denomThreshold.ModInverse(denomThreshold, secretSharePrime)
+		denomFull.ModInverse(denomFull, secretSharePrime)
 
 		betaThreshold.Mul(betaThreshold, denomThreshold)
-		betaThreshold.Mod(betaThreshold, pk.P)
+		betaThreshold.Mod(betaThreshold, secretSharePrime)
 		betaFull.Mul(betaFull, denomFull)
-		betaFull.Mod(betaFull, pk.P)
+		betaFull.Mod(betaFull, secretSharePrime)
 
 		parties[i] = &node.Party{
 			ID:           i,
 			Sk:           tpks[i],
 			Pk:           pk,
+			P:            secretSharePrime,
 			BetaT:        betaThreshold,
 			BetaN:        betaFull,
 			Threshold:    params.Threshold,
@@ -425,14 +427,14 @@ func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 			DebugLatency: params.NetworkLatency}
 	}
 
-	mpc := &MPC{parties[0], parties, params.Threshold, pk, params.Verify}
+	mpc := &MPC{parties[0], parties, params.Threshold, pk, params.Verify, params.MessageBits, params.SecurityBits, secretSharePrime, params.FPPrecisionBits}
 
 	// init constants
 	big0 = big.NewInt(0)
 	big1 = big.NewInt(1)
 	big2 = big.NewInt(2)
 	big2InvN = big.NewInt(0).ModInverse(big2, pk.N)
-	big2InvP = big.NewInt(0).ModInverse(big2, pk.P)
+	big2InvP = big.NewInt(0).ModInverse(big2, secretSharePrime)
 
 	return mpc
 }

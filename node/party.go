@@ -18,6 +18,7 @@ type Party struct {
 	ID           int
 	Sk           *paillier.ThresholdPrivateKey
 	Pk           *paillier.PublicKey
+	P            *big.Int
 	BetaT        *big.Int // value of this party used for share reconstruction of degree threshold poly
 	BetaN        *big.Int // value of this party used for share reconstruction of degree N poly
 	Threshold    int
@@ -114,7 +115,7 @@ func (party *Party) Sub(share1, share2 *Share, newId int) (*Share, error) {
 	}
 
 	val := big.NewInt(0).Sub(v1, v2)
-	val.Mod(val, party.Pk.P)
+	val.Mod(val, party.P)
 
 	party.shares.Store(newId, val)
 
@@ -134,7 +135,7 @@ func (party *Party) Add(share1, share2 *Share, newId int) (*Share, error) {
 	}
 
 	val := big.NewInt(0).Add(v1, v2)
-	val.Mod(val, party.Pk.P)
+	val.Mod(val, party.P)
 
 	party.shares.Store(newId, val)
 	return &Share{party.ID, newId}, nil
@@ -149,7 +150,7 @@ func (party *Party) MultC(share *Share, c *big.Int, newId int) (*Share, error) {
 	}
 
 	val.Mul(val, c)
-	val.Mod(val, party.Pk.P)
+	val.Mod(val, party.P)
 
 	party.shares.Store(newId, val)
 
@@ -196,7 +197,7 @@ func (party *Party) CreateShares(s *big.Int, id int) ([]*Share, []*big.Int, int)
 	coeffs[0].Set(s)
 
 	for i := 1; i < party.Threshold; i++ {
-		coeffs[i] = paillier.CryptoRandom(party.Pk.P)
+		coeffs[i] = paillier.CryptoRandom(party.P)
 	}
 
 	var wg sync.WaitGroup
@@ -213,7 +214,7 @@ func (party *Party) CreateShares(s *big.Int, id int) ([]*Share, []*big.Int, int)
 				acc.Add(acc, coeffs[k])
 			}
 
-			values[i] = acc.Mod(acc, party.Pk.P)
+			values[i] = acc.Mod(acc, party.P)
 			shares[i] = &Share{PartyID: party.Parties[i].ID, ID: id}
 
 		}(i)
