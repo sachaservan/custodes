@@ -1,0 +1,15 @@
+{
+	"TestType": "PEARSON",
+	"UseShares": true,
+	"PValue": 0.011005300458578754,
+	"DatasetSize": 10000,
+	"NumberOfCategories": 0,
+	"NumberOfParties": 4,
+	"TotalNumberOfShares": 247329,
+	"TotalNumberOfPaillierMults": 0,
+	"TotalNumberOfShareMults": 79277,
+	"TotalTime": 31.117808288,
+	"ComputationTime": 7.796830008,
+	"DivisionTime": 23.320978884,
+	"Latency": 0
+}
