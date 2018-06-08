@@ -416,15 +416,15 @@ func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 		betaFull.Mod(betaFull, secretSharePrime)
 
 		parties[i] = &node.Party{
-			ID:           i,
-			Sk:           tpks[i],
-			Pk:           pk,
-			P:            secretSharePrime,
-			BetaT:        betaThreshold,
-			BetaN:        betaFull,
-			Threshold:    params.Threshold,
-			Parties:      parties,
-			DebugLatency: params.NetworkLatency}
+			ID:             i,
+			Sk:             tpks[i],
+			Pk:             pk,
+			P:              secretSharePrime,
+			BetaT:          betaThreshold,
+			BetaN:          betaFull,
+			Threshold:      params.Threshold,
+			Parties:        parties,
+			NetworkLatency: params.NetworkLatency}
 	}
 
 	mpc := &MPC{parties[0], parties, params.Threshold, pk, params.Verify, params.MessageBits, params.SecurityBits, secretSharePrime, params.FPPrecisionBits}

@@ -30,7 +30,7 @@ type Report struct {
 func main() {
 	printWelcome()
 
-	runtime.GOMAXPROCS(10000)
+	runtime.GOMAXPROCS(40)
 
 	// Command line arguments
 	rootDirCmd := flag.String("rootdir", "", "full path to project dir.")
@@ -110,6 +110,7 @@ func main() {
 	filenameChiSq10000_20 := rootDir + "/benchmark/benchmark_chisq_10000_20.csv"
 
 	/************************************************************************/
+	runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 
 	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)

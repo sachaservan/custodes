@@ -8,7 +8,7 @@ import (
 )
 
 func (party *Party) GetRandomMultEnc(c *paillier.Ciphertext) (*paillier.Ciphertext, *paillier.Ciphertext) {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	r := paillier.CryptoRandom(party.P)
 	enc := party.Pk.Encrypt(r)
@@ -18,7 +18,7 @@ func (party *Party) GetRandomMultEnc(c *paillier.Ciphertext) (*paillier.Cipherte
 }
 
 func (party *Party) GetRandomEncAndShare(id int, bound *big.Int) (*paillier.Ciphertext, *Share) {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	r := paillier.CryptoRandom(bound)
 	enc := party.Pk.Encrypt(r)
@@ -29,7 +29,7 @@ func (party *Party) GetRandomEncAndShare(id int, bound *big.Int) (*paillier.Ciph
 }
 
 func (party *Party) GetRandomEncBitVector(m int) []*paillier.Ciphertext {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	vec := make([]*paillier.Ciphertext, m)
 	for i := 0; i < m; i++ {
@@ -41,7 +41,7 @@ func (party *Party) GetRandomEncBitVector(m int) []*paillier.Ciphertext {
 }
 
 func (party *Party) GetRandomEnc(bound *big.Int) *paillier.Ciphertext {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	r := paillier.CryptoRandom(bound)
 	enc := party.Pk.Encrypt(r)
@@ -49,14 +49,14 @@ func (party *Party) GetRandomEnc(bound *big.Int) *paillier.Ciphertext {
 }
 
 func (party *Party) PartialDecrypt(ciphertext *paillier.Ciphertext) *paillier.PartialDecryption {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	partial := party.Sk.Decrypt(ciphertext.C)
 	return partial
 }
 
 func (party *Party) PartialDecryptAndProof(ciphertext *paillier.Ciphertext) *paillier.PartialDecryptionZKP {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	zkp, _ := party.Sk.DecryptAndProduceZKP(ciphertext.C)
 

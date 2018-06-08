@@ -15,16 +15,16 @@ var nextShareId = 0
 var shareIdMutex sync.Mutex
 
 type Party struct {
-	ID           int
-	Sk           *paillier.ThresholdPrivateKey
-	Pk           *paillier.PublicKey
-	P            *big.Int
-	BetaT        *big.Int // value of this party used for share reconstruction of degree threshold poly
-	BetaN        *big.Int // value of this party used for share reconstruction of degree N poly
-	Threshold    int
-	Parties      []*Party
-	DebugLatency time.Duration
-	shares       sync.Map
+	ID             int
+	Sk             *paillier.ThresholdPrivateKey
+	Pk             *paillier.PublicKey
+	P              *big.Int
+	BetaT          *big.Int // value of this party used for share reconstruction of degree threshold poly
+	BetaN          *big.Int // value of this party used for share reconstruction of degree N poly
+	Threshold      int
+	Parties        []*Party
+	NetworkLatency time.Duration
+	shares         sync.Map
 }
 
 type Share struct {
@@ -45,11 +45,13 @@ type PartialDecryptElement struct {
 }
 
 func (party *Party) RevealShare(share *Share) (*big.Int, error) {
+	time.Sleep(party.NetworkLatency)
 	return party.getShare(share.ID)
 }
 
 // Store stores a share value
 func (party *Party) Store(share *Share, value *big.Int) {
+	time.Sleep(party.NetworkLatency)
 	party.shares.Store(share.ID, value)
 }
 
@@ -65,12 +67,13 @@ func (party *Party) getShare(shareID int) (*big.Int, error) {
 }
 
 func (party *Party) DeleteAllShares() {
-
+	time.Sleep(party.NetworkLatency)
 	party.shares = sync.Map{}
 	nextShareId = 0
 }
 
 func (party *Party) StoreAddShare(share *Share, value *big.Int) {
+	time.Sleep(party.NetworkLatency)
 
 	local, err := party.getShare(share.ID)
 	if err != nil {
@@ -82,7 +85,7 @@ func (party *Party) StoreAddShare(share *Share, value *big.Int) {
 }
 
 func (party *Party) Mult(share1, share2 *Share, newId int) (*Share, error) {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	v1, err := party.getShare(share1.ID)
 	if err != nil {
@@ -103,7 +106,7 @@ func (party *Party) Mult(share1, share2 *Share, newId int) (*Share, error) {
 }
 
 func (party *Party) Sub(share1, share2 *Share, newId int) (*Share, error) {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	v1, err := party.getShare(share1.ID)
 	if err != nil {
@@ -123,7 +126,7 @@ func (party *Party) Sub(share1, share2 *Share, newId int) (*Share, error) {
 }
 
 func (party *Party) Add(share1, share2 *Share, newId int) (*Share, error) {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	v1, err := party.getShare(share1.ID)
 	if err != nil {
@@ -142,7 +145,7 @@ func (party *Party) Add(share1, share2 *Share, newId int) (*Share, error) {
 }
 
 func (party *Party) MultC(share *Share, c *big.Int, newId int) (*Share, error) {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	val, err := party.getShare(share.ID)
 	if err != nil {
@@ -158,7 +161,7 @@ func (party *Party) MultC(share *Share, c *big.Int, newId int) (*Share, error) {
 }
 
 func (party *Party) CreateRandomShare(bound *big.Int, id int) *Share {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	r := Random(bound)
 	shares, values, id := party.CreateShares(r, id)
@@ -168,7 +171,7 @@ func (party *Party) CreateRandomShare(bound *big.Int, id int) *Share {
 }
 
 func (party *Party) CopyShare(share *Share, newId int) *Share {
-	time.Sleep(party.DebugLatency)
+	time.Sleep(party.NetworkLatency)
 
 	val, err := party.getShare(share.ID)
 	if err != nil {
