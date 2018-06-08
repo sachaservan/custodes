@@ -112,6 +112,19 @@ func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool)
 	}
 	wg.Wait()
 
+	residualShares := make([]*node.Share, numCategories)
+	expectedValueShares := make([]*node.Share, numCategories)
+
+	for i := 0; i < numCategories; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			residualShares[i] = mpc.PaillierToShare(residual[i])
+			expectedValueShares[i] = mpc.PaillierToShare(expectedValues[i])
+		}(i)
+	}
+	wg.Wait()
+
 	endTimePaillier := time.Now()
 
 	// perform division and summation
@@ -120,9 +133,7 @@ func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool)
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			residualShare := mpc.PaillierToShare(residual[i])
-			expectedValueShare := mpc.PaillierToShare(expectedValues[i])
-			xi[i] = mpc.FPDivision(residualShare, expectedValueShare)
+			xi[i] = mpc.FPDivision(residualShares[i], expectedValueShares[i])
 		}(i)
 	}
 	wg.Wait()
@@ -149,7 +160,7 @@ func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool)
 }
 
 // Simulation of Pearson's coorelation coefficient
-func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
+func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -255,9 +266,6 @@ func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug boo
 
 	denominator := mpc.EFPMult(sumDevX2, sumDevY2)
 
-	// done with paillier computations
-	endTimePaillier := time.Now()
-
 	if debug {
 		// sanity check
 		fmt.Printf("[DEBUG] NUMERATOR:   %s\n", mpc.RevealInt(numerator).String())
@@ -268,12 +276,18 @@ func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug boo
 	numeratorShare := mpc.PaillierToShare(numerator)
 	denominatorShare := mpc.PaillierToShare(denominator)
 
+	// done with paillier computations
+	endTimePaillier := time.Now()
+
 	//the threshold for negative reps
 	threshold := big.NewInt(0).Div(mpc.P, big.NewInt(2))
 
 	//extract the sign bit
 	numeratorShareBits := mpc.BitsDec(numeratorShare, mpc.K)
 	sign := mpc.BitsLT(mpc.BitsBigEndian(threshold, mpc.K), numeratorShareBits)
+
+	// done with paillier computations
+	endTimeCmp := time.Now()
 
 	if debug {
 		// sanity check
@@ -302,12 +316,13 @@ func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug boo
 	}
 
 	totalTime := endTime.Sub(startTime)
-	divTime := time.Now().Sub(endTimePaillier)
+	cmpTime := endTimeCmp.Sub(endTimePaillier)
+	divTime := time.Now().Sub(endTimeCmp)
 	paillierTime := endTimePaillier.Sub(startTime)
 
 	numShares := mpc.DeleteAllShares()
 
-	return pstat, len(x), totalTime, paillierTime, divTime, numShares
+	return pstat, len(x), totalTime, paillierTime, cmpTime, divTime, numShares
 }
 
 func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
@@ -434,8 +449,6 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", mpc.RevealInt(denominator).String())
 	}
 
-	endTimePaillier := time.Now()
-
 	numeratorShare := mpc.PaillierToShare(numerator)
 	denominatorShare := mpc.PaillierToShare(denominator)
 
@@ -444,6 +457,8 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 		fmt.Printf("[DEBUG] NUMERATOR (share): %s\n", mpc.RevealShare(numeratorShare).String())
 		fmt.Printf("[DEBUG] DENOMINATOR (share): %s\n", mpc.RevealShare(denominatorShare).String())
 	}
+
+	endTimePaillier := time.Now()
 
 	res := mpc.FPDivision(numeratorShare, denominatorShare)
 
@@ -742,7 +757,7 @@ func exampleTTestSimulationWithSecretSharing(mpc *hypocert.MPC, filepath string,
 }
 
 // Simulation of Pearson's coorelation coefficient
-func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
+func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -855,14 +870,13 @@ func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath s
 	denominator := mpc.Mult(sumDevX2, sumDevY2)
 	denominator = mpc.TruncPR(denominator, mpc.K, mpc.FPPrecBits)
 
-	// done with computations
-	endTimeComp := time.Now()
-
 	if debug {
 		// sanity check
 		fmt.Printf("[DEBUG] NUMERATOR:   %s\n", mpc.RevealShare(numerator).String())
 		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", mpc.RevealShare(denominator).String())
 	}
+
+	startCmpTime := time.Now()
 
 	//the threshold for negative reps
 	threshold := big.NewInt(0).Div(mpc.P, big.NewInt(2))
@@ -870,6 +884,8 @@ func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath s
 	//extract the sign bit
 	numeratorBits := mpc.BitsDec(numerator, mpc.K)
 	sign := mpc.BitsLT(mpc.BitsBigEndian(threshold, mpc.K), numeratorBits)
+
+	endCmpTime := time.Now()
 
 	if debug {
 		// sanity check
@@ -879,6 +895,9 @@ func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath s
 	// square the numerator
 	numerator = mpc.Mult(numerator, numerator)
 	numerator = mpc.TruncPR(numerator, mpc.K, mpc.FPPrecBits)
+
+	// done with computations
+	endTimeComp := time.Now()
 
 	res := mpc.FPDivision(numerator, denominator)
 
@@ -896,12 +915,14 @@ func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath s
 	}
 
 	totalTime := endTime.Sub(startTime)
+	cmpTime := endCmpTime.Sub(startCmpTime)
 	divTime := time.Now().Sub(endTimeComp)
-	paillierTime := endTimeComp.Sub(startTime)
+	computeTime := endTimeComp.Sub(startTime)
+	computeTime = computeTime - cmpTime
 
 	numShares := mpc.DeleteAllShares()
 
-	return pstat, len(x), totalTime, paillierTime, divTime, numShares
+	return pstat, len(x), totalTime, computeTime, cmpTime, divTime, numShares
 }
 
 func parseCategoricalDataset(file string) ([][]int64, error) {

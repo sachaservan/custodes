@@ -24,6 +24,7 @@ type Report struct {
 	TotalNumberOfShareMults    int
 	TotalTime                  float64
 	ComputationTime            float64
+	ComparisonTime             float64
 	DivisionTime               float64
 	Latency                    float64
 }
@@ -295,14 +296,15 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 	var ptest *big.Float
 	var datasetSize int
 	var totalTime time.Duration
-	var paillierTime time.Duration
+	var computeTime time.Duration
 	var divTime time.Duration
+	var cmpTime time.Duration
 	var numSharesCreated int
 
 	if onlyUseShares {
-		ptest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated = examplePearsonsTestSimulationWihSecretSharing(mpc, filename, debug)
+		ptest, datasetSize, totalTime, computeTime, cmpTime, divTime, numSharesCreated = examplePearsonsTestSimulationWihSecretSharing(mpc, filename, debug)
 	} else {
-		ptest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated = examplePearsonsTestSimulation(mpc, filename, debug)
+		ptest, datasetSize, totalTime, computeTime, cmpTime, divTime, numSharesCreated = examplePearsonsTestSimulation(mpc, filename, debug)
 	}
 
 	fmt.Println("************************************************")
@@ -315,7 +317,8 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 	fmt.Printf("Total number of Paillier Mults:  %d\n", hypocert.MultCountPaillier)
 	fmt.Printf("Total number of Share Mults:     %d\n", hypocert.MultCountShares)
 	fmt.Printf("Pearson's Test runtime (s):      %f\n", totalTime.Seconds())
-	fmt.Printf("  Computation runtime (s):       %f\n", paillierTime.Seconds())
+	fmt.Printf("  Computation runtime (s):       %f\n", computeTime.Seconds())
+	fmt.Printf("  Comparison runtime (s):        %f\n", cmpTime.Seconds())
 	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
 	fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 	fmt.Println("************************************************")
@@ -333,7 +336,8 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 		TotalNumberOfPaillierMults: hypocert.MultCountPaillier,
 		TotalNumberOfShareMults:    hypocert.MultCountShares,
 		TotalTime:                  totalTime.Seconds(),
-		ComputationTime:            paillierTime.Seconds(),
+		ComputationTime:            computeTime.Seconds(),
+		ComparisonTime:             cmpTime.Seconds(),
 		DivisionTime:               divTime.Seconds(),
 		Latency:                    latency.Seconds()}
 
