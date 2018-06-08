@@ -14,6 +14,7 @@ import (
 
 type Report struct {
 	TestType                   string
+    UseShares                  bool
 	PValue                     float64
 	DatasetSize                int
 	NumberOfCategories         int
@@ -182,6 +183,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 
 	r := Report{
 		TestType:                   "CHI2",
+        UseShares:                  onlyUseShares,
 		PValue:                     pvalue,
 		DatasetSize:                datasetSize,
 		NumberOfCategories:         numCategories,
@@ -195,7 +197,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 		Latency:                    latency.Seconds()}
 
 	reportJson, _ := json.MarshalIndent(r, "", "\t")
-	err := ioutil.WriteFile(strconv.Itoa(runId)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+	err := ioutil.WriteFile("../benchmark/res/" + strconv.Itoa(runId)+"_"+strconv.FormatBool(onlyUseShares)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
 
 	if err != nil {
 		fmt.Println(err)
@@ -250,6 +252,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 
 	r := Report{
 		TestType:                   "TTEST",
+        UseShares:                  onlyUseShares,
 		PValue:                     pvalue,
 		DatasetSize:                datasetSize,
 		NumberOfCategories:         0,
@@ -269,7 +272,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 		return
 	}
 
-	err = ioutil.WriteFile(strconv.Itoa(runId)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+	err = ioutil.WriteFile("../benchmark/res/" + strconv.Itoa(runId)+"_"+strconv.FormatBool(onlyUseShares)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
 
 	if err != nil {
 		fmt.Println(err)
@@ -323,6 +326,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 
 	r := Report{
 		TestType:                   "PEARSON",
+        UseShares:                  onlyUseShares,
 		PValue:                     pvalue,
 		DatasetSize:                datasetSize,
 		NumberOfCategories:         0,
@@ -337,7 +341,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 
 	numCategories := 0
 	reportJson, _ := json.MarshalIndent(r, "", "\t")
-	err := ioutil.WriteFile(strconv.Itoa(runId)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+	err := ioutil.WriteFile("../benchmark/res/" + strconv.Itoa(runId)+"_"+strconv.FormatBool(onlyUseShares)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
 
 	if err != nil {
 		fmt.Println(err)
