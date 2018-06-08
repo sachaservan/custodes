@@ -14,7 +14,7 @@ import (
 
 type Report struct {
 	TestType                   string
-    UseShares                  bool
+	UseShares                  bool
 	PValue                     float64
 	DatasetSize                int
 	NumberOfCategories         int
@@ -111,8 +111,6 @@ func main() {
 	filenameChiSq10000_20 := rootDir + "/benchmark/benchmark_chisq_10000_20.csv"
 
 	/************************************************************************/
-	runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-
 	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
@@ -183,7 +181,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 
 	r := Report{
 		TestType:                   "CHI2",
-        UseShares:                  onlyUseShares,
+		UseShares:                  onlyUseShares,
 		PValue:                     pvalue,
 		DatasetSize:                datasetSize,
 		NumberOfCategories:         numCategories,
@@ -197,7 +195,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 		Latency:                    latency.Seconds()}
 
 	reportJson, _ := json.MarshalIndent(r, "", "\t")
-	err := ioutil.WriteFile("../benchmark/res/" + strconv.Itoa(runId)+"_"+strconv.FormatBool(onlyUseShares)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+	err := ioutil.WriteFile("../benchmark/res/"+strconv.Itoa(runId)+"_"+strconv.FormatBool(onlyUseShares)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
 
 	if err != nil {
 		fmt.Println(err)
@@ -252,7 +250,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 
 	r := Report{
 		TestType:                   "TTEST",
-        UseShares:                  onlyUseShares,
+		UseShares:                  onlyUseShares,
 		PValue:                     pvalue,
 		DatasetSize:                datasetSize,
 		NumberOfCategories:         0,
@@ -272,7 +270,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 		return
 	}
 
-	err = ioutil.WriteFile("../benchmark/res/" + strconv.Itoa(runId)+"_"+strconv.FormatBool(onlyUseShares)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+	err = ioutil.WriteFile("../benchmark/res/"+strconv.Itoa(runId)+"_"+strconv.FormatBool(onlyUseShares)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
 
 	if err != nil {
 		fmt.Println(err)
@@ -326,7 +324,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 
 	r := Report{
 		TestType:                   "PEARSON",
-        UseShares:                  onlyUseShares,
+		UseShares:                  onlyUseShares,
 		PValue:                     pvalue,
 		DatasetSize:                datasetSize,
 		NumberOfCategories:         0,
@@ -341,7 +339,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 
 	numCategories := 0
 	reportJson, _ := json.MarshalIndent(r, "", "\t")
-	err := ioutil.WriteFile("../benchmark/res/" + strconv.Itoa(runId)+"_"+strconv.FormatBool(onlyUseShares)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
+	err := ioutil.WriteFile("../benchmark/res/"+strconv.Itoa(runId)+"_"+strconv.FormatBool(onlyUseShares)+"_"+r.TestType+"_"+strconv.Itoa(datasetSize)+"_"+strconv.Itoa(numParties)+"_"+strconv.Itoa(numCategories)+".json", reportJson, 0644)
 
 	if err != nil {
 		fmt.Println(err)
