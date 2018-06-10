@@ -8,8 +8,9 @@
 	"TotalNumberOfShares": 102458,
 	"TotalNumberOfPaillierMults": 0,
 	"TotalNumberOfShareMults": 30129,
-	"TotalTime": 47.828959183,
-	"ComputationTime": 12.070333854,
-	"DivisionTime": 35.75862634,
+	"TotalTime": 52.232111843,
+	"ComputationTime": 13.056284354,
+	"ComparisonTime": 0,
+	"DivisionTime": 39.175828378,
 	"Latency": 0
 }
