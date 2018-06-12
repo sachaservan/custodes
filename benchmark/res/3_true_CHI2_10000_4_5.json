@@ -7,10 +7,10 @@
 	"NumberOfParties": 4,
 	"TotalNumberOfShares": 357075,
 	"TotalNumberOfPaillierMults": 0,
-	"TotalNumberOfShareMults": 99959,
-	"TotalTime": 42.206730229,
-	"ComputationTime": 0.880488348,
+	"TotalNumberOfShareMults": 99942,
+	"TotalTime": 31.623616239,
+	"ComputationTime": 0.99116536,
 	"ComparisonTime": 0,
-	"DivisionTime": 41.326242483,
+	"DivisionTime": 30.63245205,
 	"Latency": 0
 }
