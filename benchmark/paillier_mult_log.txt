@@ -12,14 +12,14 @@ go build -o hypocert *.go
 	|___/|_|                           
 Secure Hypothesis Testing
 =====================================
-dummy /data/ez/go/src/hypocert true 0
+dummy /data/ez/go/src/hypocert false 0
 num parties 4
 Generating keys...done.
 ------------------------------------------------
 Benchmarking Multiplication times...
 ------------------------------------------------
-Paillier MULT time:   64.608915
-Shares MULT time:     0.260696
+Paillier MULT time:   65.148141
+Shares MULT time:     0.265976
 Network latency (s):  0.000000
 =====================================
  _    _                    _____          _  
@@ -32,14 +32,14 @@ Network latency (s):  0.000000
 	|___/|_|                           
 Secure Hypothesis Testing
 =====================================
-dummy /data/ez/go/src/hypocert true 0
+dummy /data/ez/go/src/hypocert false 0
 num parties 8
 Generating keys...done.
 ------------------------------------------------
 Benchmarking Multiplication times...
 ------------------------------------------------
-Paillier MULT time:   95.685699
-Shares MULT time:     0.972207
+Paillier MULT time:   107.440696
+Shares MULT time:     0.980927
 Network latency (s):  0.000000
 =====================================
  _    _                    _____          _  
@@ -52,12 +52,12 @@ Network latency (s):  0.000000
 	|___/|_|                           
 Secure Hypothesis Testing
 =====================================
-dummy /data/ez/go/src/hypocert true 0
+dummy /data/ez/go/src/hypocert false 0
 num parties 16
 Generating keys...done.
 ------------------------------------------------
 Benchmarking Multiplication times...
 ------------------------------------------------
-Paillier MULT time:   172.580658
-Shares MULT time:     3.642241
+Paillier MULT time:   188.299639
+Shares MULT time:     3.928081
 Network latency (s):  0.000000

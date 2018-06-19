@@ -53,6 +53,7 @@ func main() {
 	useShares := *useSharesCmd
 
 	fmt.Println("dummy " + rootDir + " " + strconv.FormatBool(useShares) + " " + strconv.Itoa(*runIdCmd))
+	fmt.Println("num parties " + strconv.Itoa(numParties))
 
 	if numParties < 2*threshold-1 {
 		panic("Threshold is too high compared to the number of parties!")
