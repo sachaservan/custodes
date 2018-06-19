@@ -43,16 +43,16 @@ func main() {
 	debugCmd := flag.Bool("debug", false, "print debug statements during computation.")
 	useSharesCmd := flag.Bool("shares", false, "use only secret sharing for computations.")
     
-    fmt.Println("dummy " + rootDirCmd)
+    	flag.Parse()
 
-	flag.Parse()
-
-	//rootDir := *rootDirCmd
+	rootDir := *rootDirCmd
 	numParties := *numPartiesCmd
 	threshold := *thresholdCmd
 	networkLatency := time.Duration(*networkLatencyCmd)
 	debug := *debugCmd
-	//useShares := *useSharesCmd
+	useShares := *useSharesCmd
+
+	fmt.Println("dummy " + rootDir + " " + strconv.FormatBool(useShares) + " " + strconv.Itoa(*runIdCmd))
 
 	if numParties < 2*threshold-1 {
 		panic("Threshold is too high compared to the number of parties!")
