@@ -18,8 +18,8 @@ Generating keys...done.
 ------------------------------------------------
 Benchmarking Multiplication times...
 ------------------------------------------------
-Paillier MULT time:   64.608915
-Shares MULT time:     0.260696
+Paillier MULT time:   75.474662
+Shares MULT time:     0.262635
 Network latency (s):  0.000000
 =====================================
  _    _                    _____          _  
@@ -38,8 +38,8 @@ Generating keys...done.
 ------------------------------------------------
 Benchmarking Multiplication times...
 ------------------------------------------------
-Paillier MULT time:   95.685699
-Shares MULT time:     0.972207
+Paillier MULT time:   98.867743
+Shares MULT time:     1.248109
 Network latency (s):  0.000000
 =====================================
  _    _                    _____          _  
@@ -58,6 +58,187 @@ Generating keys...done.
 ------------------------------------------------
 Benchmarking Multiplication times...
 ------------------------------------------------
-Paillier MULT time:   172.580658
-Shares MULT time:     3.642241
+Paillier MULT time:   218.045247
+Shares MULT time:     3.937634
+Network latency (s):  0.000000
+=====================================
+ _    _                    _____          _  
+| |  | |                  / ____|        | |  
+| |__| |_   _ _ __   ___ | |     ___ _ __| |_ 
+|  __  | | | | '_ \ / _ \| |    / _ \ '__| __|
+| |  | | |_| | |_) | (_) | |___|  __/ |  | |_ 
+|_|  |_|\__, | .__/ \___/ \_____\___|_|   \__|
+	 __/ | |                              
+	|___/|_|                           
+Secure Hypothesis Testing
+=====================================
+dummy /data/ez/go/src/hypocert true 0
+num parties 32
+Generating keys...done.
+------------------------------------------------
+Benchmarking Multiplication times...
+------------------------------------------------
+Paillier MULT time:   393.339048
+Shares MULT time:     15.166085
+Network latency (s):  0.000000
+=====================================
+ _    _                    _____          _  
+| |  | |                  / ____|        | |  
+| |__| |_   _ _ __   ___ | |     ___ _ __| |_ 
+|  __  | | | | '_ \ / _ \| |    / _ \ '__| __|
+| |  | | |_| | |_) | (_) | |___|  __/ |  | |_ 
+|_|  |_|\__, | .__/ \___/ \_____\___|_|   \__|
+	 __/ | |                              
+	|___/|_|                           
+Secure Hypothesis Testing
+=====================================
+dummy /data/ez/go/src/hypocert true 0
+num parties 64
+Generating keys...done.
+------------------------------------------------
+Benchmarking Multiplication times...
+------------------------------------------------
+Paillier MULT time:   750.131545
+Shares MULT time:     65.220922
+Network latency (s):  0.000000
+=====================================
+ _    _                    _____          _  
+| |  | |                  / ____|        | |  
+| |__| |_   _ _ __   ___ | |     ___ _ __| |_ 
+|  __  | | | | '_ \ / _ \| |    / _ \ '__| __|
+| |  | | |_| | |_) | (_) | |___|  __/ |  | |_ 
+|_|  |_|\__, | .__/ \___/ \_____\___|_|   \__|
+	 __/ | |                              
+	|___/|_|                           
+Secure Hypothesis Testing
+=====================================
+dummy /data/ez/go/src/hypocert true 0
+num parties 128
+Generating keys...done.
+------------------------------------------------
+Benchmarking Multiplication times...
+------------------------------------------------
+Paillier MULT time:   1948.020299
+Shares MULT time:     246.318379
+Network latency (s):  0.000000
+1
+=====================================
+ _    _                    _____          _  
+| |  | |                  / ____|        | |  
+| |__| |_   _ _ __   ___ | |     ___ _ __| |_ 
+|  __  | | | | '_ \ / _ \| |    / _ \ '__| __|
+| |  | | |_| | |_) | (_) | |___|  __/ |  | |_ 
+|_|  |_|\__, | .__/ \___/ \_____\___|_|   \__|
+	 __/ | |                              
+	|___/|_|                           
+Secure Hypothesis Testing
+=====================================
+dummy /data/ez/go/src/hypocert true 1
+num parties 4
+Generating keys...done.
+------------------------------------------------
+Benchmarking Multiplication times...
+------------------------------------------------
+Paillier MULT time:   64.549084
+Shares MULT time:     0.244700
+Network latency (s):  0.000000
+=====================================
+ _    _                    _____          _  
+| |  | |                  / ____|        | |  
+| |__| |_   _ _ __   ___ | |     ___ _ __| |_ 
+|  __  | | | | '_ \ / _ \| |    / _ \ '__| __|
+| |  | | |_| | |_) | (_) | |___|  __/ |  | |_ 
+|_|  |_|\__, | .__/ \___/ \_____\___|_|   \__|
+	 __/ | |                              
+	|___/|_|                           
+Secure Hypothesis Testing
+=====================================
+dummy /data/ez/go/src/hypocert true 1
+num parties 8
+Generating keys...done.
+------------------------------------------------
+Benchmarking Multiplication times...
+------------------------------------------------
+Paillier MULT time:   94.622577
+Shares MULT time:     1.005867
+Network latency (s):  0.000000
+=====================================
+ _    _                    _____          _  
+| |  | |                  / ____|        | |  
+| |__| |_   _ _ __   ___ | |     ___ _ __| |_ 
+|  __  | | | | '_ \ / _ \| |    / _ \ '__| __|
+| |  | | |_| | |_) | (_) | |___|  __/ |  | |_ 
+|_|  |_|\__, | .__/ \___/ \_____\___|_|   \__|
+	 __/ | |                              
+	|___/|_|                           
+Secure Hypothesis Testing
+=====================================
+dummy /data/ez/go/src/hypocert true 1
+num parties 16
+Generating keys...done.
+------------------------------------------------
+Benchmarking Multiplication times...
+------------------------------------------------
+Paillier MULT time:   171.731761
+Shares MULT time:     4.007231
+Network latency (s):  0.000000
+=====================================
+ _    _                    _____          _  
+| |  | |                  / ____|        | |  
+| |__| |_   _ _ __   ___ | |     ___ _ __| |_ 
+|  __  | | | | '_ \ / _ \| |    / _ \ '__| __|
+| |  | | |_| | |_) | (_) | |___|  __/ |  | |_ 
+|_|  |_|\__, | .__/ \___/ \_____\___|_|   \__|
+	 __/ | |                              
+	|___/|_|                           
+Secure Hypothesis Testing
+=====================================
+dummy /data/ez/go/src/hypocert true 1
+num parties 32
+Generating keys...done.
+------------------------------------------------
+Benchmarking Multiplication times...
+------------------------------------------------
+Paillier MULT time:   340.714286
+Shares MULT time:     15.113428
+Network latency (s):  0.000000
+=====================================
+ _    _                    _____          _  
+| |  | |                  / ____|        | |  
+| |__| |_   _ _ __   ___ | |     ___ _ __| |_ 
+|  __  | | | | '_ \ / _ \| |    / _ \ '__| __|
+| |  | | |_| | |_) | (_) | |___|  __/ |  | |_ 
+|_|  |_|\__, | .__/ \___/ \_____\___|_|   \__|
+	 __/ | |                              
+	|___/|_|                           
+Secure Hypothesis Testing
+=====================================
+dummy /data/ez/go/src/hypocert true 1
+num parties 64
+Generating keys...done.
+------------------------------------------------
+Benchmarking Multiplication times...
+------------------------------------------------
+Paillier MULT time:   750.139454
+Shares MULT time:     59.940590
+Network latency (s):  0.000000
+=====================================
+ _    _                    _____          _  
+| |  | |                  / ____|        | |  
+| |__| |_   _ _ __   ___ | |     ___ _ __| |_ 
+|  __  | | | | '_ \ / _ \| |    / _ \ '__| __|
+| |  | | |_| | |_) | (_) | |___|  __/ |  | |_ 
+|_|  |_|\__, | .__/ \___/ \_____\___|_|   \__|
+	 __/ | |                              
+	|___/|_|                           
+Secure Hypothesis Testing
+=====================================
+dummy /data/ez/go/src/hypocert true 1
+num parties 128
+Generating keys...done.
+------------------------------------------------
+Benchmarking Multiplication times...
+------------------------------------------------
+Paillier MULT time:   1971.813878
+Shares MULT time:     315.471685
 Network latency (s):  0.000000
