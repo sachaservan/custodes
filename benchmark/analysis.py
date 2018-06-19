@@ -47,6 +47,7 @@ flatui = ['#28aad5', '#b24d94', '#38ae97' ,'#ec7545']
 
 def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     comptime = {}
+    comparetime = {}
     divtime = {}
     
     numParties = []
@@ -60,6 +61,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
                 datasetSizes.append(d['DatasetSize'])
                 comptime[d['DatasetSize']] = {}
                 divtime[d['DatasetSize']] = {}
+                comparetime[d['DatasetSize']] = {}
                 
             if d['NumberOfParties'] not in numParties:
                 numParties.append(d['NumberOfParties'])
@@ -69,16 +71,19 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
                 
             if d['NumberOfParties'] not in comptime[d['DatasetSize']]:
                 comptime[d['DatasetSize']][d['NumberOfParties']] = {}
-                divtime[d['DatasetSize']][d['NumberOfParties']] = {}  
+                divtime[d['DatasetSize']][d['NumberOfParties']] = {} 
+                comparetime[d['DatasetSize']][d['NumberOfParties']] = {}                  
 
             if d['NumberOfCategories'] not in comptime[d['DatasetSize']][d['NumberOfParties']]:
                 comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []
                 divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []   
+                comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []   
        
     for d in data:
         if d['TestType'] == type:
             comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComputationTime'])
             divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['DivisionTime'])
+            comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComparisonTime'])
             
     print(numParties, datasetSizes)        
     width = 0.15    
@@ -92,6 +97,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     xLabels = {}
     p1 = None
     p2 = None
+    p3 = None
     datasetLabelPrefix = '\n'
     for ds, datasetSize in enumerate(datasetSizes): 
         xLabels[datasetSize] = {} 
@@ -104,6 +110,8 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
                 std_comp = np.array(comptime[datasetSize][numParty][category]).std()
                 mean_div = np.array(divtime[datasetSize][numParty][category]).mean()
                 std_div = np.array(divtime[datasetSize][numParty][category]).std()
+                mean_compare = np.array(comparetime[datasetSize][numParty][category]).mean()
+                std_compare = np.array(comparetime[datasetSize][numParty][category]).std()
                 #current_in
                 total_width = width * len(numParties) + gap * (len(numParties) - 1)
                 pos = (idx - total_width / 2 + width / 2) + width * p + gap * p
@@ -112,6 +120,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
                 
                 p1 = ax1.bar(pos, mean_comp, width, yerr=std_comp, color=flatui[0])            
                 p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=std_div, color=flatui[1], hatch='//')
+                #p3 = ax1.bar(pos, mean_compare, width, bottom=mean_div, yerr=std_compare, color=flatui[3], hatch='+')
           
     # label
     axis_to_data = ax1.transAxes + ax1.transData.inverted()
@@ -172,7 +181,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     elif ymax / step > 20:
         step = 5 * 60
     plt.yticks(range(0, int(ymax), step))
-    plt.legend((p1[0], p2[0]), ('computation', 'division'))
+    plt.legend((p1[0], p2[0]), ('computation', 'division', 'compare'))
     
     mode = 'noshares'
     if shares:

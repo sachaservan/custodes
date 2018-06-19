@@ -73,7 +73,7 @@ func main() {
 	mpc := hypocert.NewMPCKeyGen(params)
 
 	fmt.Println("done.")
-    /*
+    
 	filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
 	filenameChiSq1000_5 := rootDir + "/benchmark/benchmark_chisq_1000_5.csv"
 	filenameChiSq1000_10 := rootDir + "/benchmark/benchmark_chisq_1000_10.csv"
@@ -106,7 +106,7 @@ func main() {
 	runChiSqBechmarks(mpc, filenameChiSq10000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-    */
+    
 	runMultBenchmark(mpc, numParties, networkLatency*time.Millisecond, false, debug)
 
 }
