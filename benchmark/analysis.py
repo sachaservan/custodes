@@ -177,7 +177,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     mode = 'noshares'
     if shares:
         mode = 'shares'
-    f.savefig('fig/runtime_' + type.lower() + mode + '.pdf', bbox_inches='tight')
+    f.savefig('fig/runtime_' + type.lower() + '_' + mode + '.pdf', bbox_inches='tight')
     
     
     if show:
