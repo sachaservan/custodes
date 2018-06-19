@@ -35,13 +35,13 @@ func main() {
 	runtime.GOMAXPROCS(40)
 
 	// Command line arguments
-	rootDirCmd := flag.String("rootdir", "", "full path to project dir.")
+	//rootDirCmd := flag.String("rootdir", "", "full path to project dir.")
 	numPartiesCmd := flag.Int("parties", 3, "integer number of parties >= 3.")
 	//runIdCmd := flag.Int("runid", 0, "integer number for keeping track of the current run.")
 	thresholdCmd := flag.Int("threshold", 2, "integer number of parties >= 2.")
 	networkLatencyCmd := flag.Int("netlat", 0, "average network latency for party communication.")
 	debugCmd := flag.Bool("debug", false, "print debug statements during computation.")
-	useSharesCmd := flag.Bool("shares", false, "use only secret sharing for computations.")
+	//useSharesCmd := flag.Bool("shares", false, "use only secret sharing for computations.")
 
 	flag.Parse()
 
