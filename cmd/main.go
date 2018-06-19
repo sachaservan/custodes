@@ -70,7 +70,7 @@ func main() {
 	mpc := hypocert.NewMPCKeyGen(params)
 
 	fmt.Println("done.")
-
+/*
 	/* 1000 row dataset */
 	filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
 
@@ -112,7 +112,7 @@ func main() {
 	filenameChiSq10000_20 := rootDir + "/benchmark/benchmark_chisq_10000_20.csv"
 
 	/************************************************************************/
-	/*runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 
