@@ -5,11 +5,12 @@
 	"DatasetSize": 5000,
 	"NumberOfCategories": 20,
 	"NumberOfParties": 16,
-	"TotalNumberOfShares": 1227837,
+	"TotalNumberOfShares": 1227820,
 	"TotalNumberOfPaillierMults": 0,
-	"TotalNumberOfShareMults": 399798,
-	"TotalTime": 2213.340611033,
-	"ComputationTime": 9.601249594,
-	"DivisionTime": 2203.739362154,
+	"TotalNumberOfShareMults": 399791,
+	"TotalTime": 1968.268126609,
+	"ComputationTime": 9.776725058,
+	"ComparisonTime": 0,
+	"DivisionTime": 1958.491402604,
 	"Latency": 0
 }

@@ -40,8 +40,8 @@ func main() {
 	networkLatencyCmd := flag.Int("netlat", 0, "average network latency for party communication.")
 	debugCmd := flag.Bool("debug", false, "print debug statements during computation.")
 	useSharesCmd := flag.Bool("shares", false, "use only secret sharing for computations.")
-
-	flag.Parse()
+    
+    	flag.Parse()
 
 	rootDir := *rootDirCmd
 	numParties := *numPartiesCmd
@@ -49,6 +49,9 @@ func main() {
 	networkLatency := time.Duration(*networkLatencyCmd)
 	debug := *debugCmd
 	useShares := *useSharesCmd
+
+	fmt.Println("dummy " + rootDir + " " + strconv.FormatBool(useShares) + " " + strconv.Itoa(*runIdCmd))
+	fmt.Println("num parties " + strconv.Itoa(numParties))
 
 	if numParties < 2*threshold-1 {
 		panic("Threshold is too high compared to the number of parties!")
@@ -68,48 +71,22 @@ func main() {
 	mpc := hypocert.NewMPCKeyGen(params)
 
 	fmt.Println("done.")
-
-	/* 1000 row dataset */
-	filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
-
-	/* 1000 row dataset, 50 categories */
+    
+	/*filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
 	filenameChiSq1000_5 := rootDir + "/benchmark/benchmark_chisq_1000_5.csv"
-
-	/* 1000 row dataset, 10 categories */
 	filenameChiSq1000_10 := rootDir + "/benchmark/benchmark_chisq_1000_10.csv"
-
-	/* 1000 row dataset, 20 categories */
 	filenameChiSq1000_20 := rootDir + "/benchmark/benchmark_chisq_1000_20.csv"
 
-	/************************************************************************/
-
-	/* 5000 row dataset */
 	filename5000 := rootDir + "/benchmark/benchmark_5000.csv"
-
-	/* 5000 row dataset, 5 categories */
 	filenameChiSq5000_5 := rootDir + "/benchmark/benchmark_chisq_5000_5.csv"
-
-	/* 5000 row dataset, 10 categories */
 	filenameChiSq5000_10 := rootDir + "/benchmark/benchmark_chisq_5000_10.csv"
-
-	/* 5000 row dataset, 20 categories */
 	filenameChiSq5000_20 := rootDir + "/benchmark/benchmark_chisq_5000_20.csv"
 
-	/************************************************************************/
-
-	/* 10000 row dataset */
 	filename10000 := rootDir + "/benchmark/benchmark_10000.csv"
-
-	/* 10000 row dataset, 5 categories */
 	filenameChiSq10000_5 := rootDir + "/benchmark/benchmark_chisq_10000_5.csv"
-
-	/* 10000 row dataset, 10 categories */
 	filenameChiSq10000_10 := rootDir + "/benchmark/benchmark_chisq_10000_10.csv"
-
-	/* 10000 row dataset, 20 categories */
 	filenameChiSq10000_20 := rootDir + "/benchmark/benchmark_chisq_10000_20.csv"
 
-	/************************************************************************/
 	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
@@ -127,7 +104,7 @@ func main() {
 	runChiSqBechmarks(mpc, filenameChiSq10000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-
+        */
 	runMultBenchmark(mpc, numParties, networkLatency*time.Millisecond, false, debug)
 
 }
