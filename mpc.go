@@ -11,10 +11,6 @@ import (
 	"hypocert/node"
 )
 
-// Benchmark
-var MultCountPaillier int
-var MultCountShares int
-
 // Constants
 var big2InvN *big.Int
 var big2InvP *big.Int
@@ -178,8 +174,6 @@ func (mpc *MPC) Mult(share1, share2 *node.Share) *node.Share {
 			panic(err)
 		}
 	}
-
-	MultCountShares++
 
 	return res
 }
@@ -360,11 +354,7 @@ func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 		panic("modulus not big enough for given parameters")
 	}
 
-	if params.MessageBits < params.FPPrecisionBits {
-		panic("message space is smaller than the precision")
-	}
-
-	shareModulusBits := 2*params.KeyBits + nu
+	shareModulusBits := 2*params.MessageBits + params.FPPrecisionBits + params.SecurityBits + 1
 	secretSharePrime, err := rand.Prime(rand.Reader, shareModulusBits)
 
 	tkh := paillier.GetThresholdKeyGenerator(params.KeyBits, params.NumParties, params.Threshold, rand.Reader)

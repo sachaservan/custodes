@@ -879,11 +879,11 @@ func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath s
 	startCmpTime := time.Now()
 
 	//the threshold for negative reps
-	threshold := big.NewInt(0).Div(mpc.P, big.NewInt(2))
+	threshold := big.NewInt(0).Div(big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.K)), nil), big.NewInt(2))
 
 	//extract the sign bit
 	numeratorBits := mpc.BitsDec(numerator, mpc.K)
-	sign := mpc.BitsLT(mpc.BitsBigEndian(threshold, mpc.K), numeratorBits)
+	sign := mpc.BitsLT(mpc.BitsBigEndian(threshold, mpc.P.BitLen()), numeratorBits)
 
 	endCmpTime := time.Now()
 

@@ -175,11 +175,12 @@ func (mpc *MPC) BitsDec(a *node.Share, m int) []*node.Share {
 	q := mpc.MultC(r, big.NewInt(0).Exp(big2, big.NewInt(int64(m)), nil))
 	r = mpc.Add(q, d)
 
-	max := big.NewInt(0).Exp(big2, big.NewInt(int64(2*mpc.K+mpc.S)), nil)
+	max := big.NewInt(0).Exp(big2, big.NewInt(int64(mpc.K+mpc.S)), nil)
+	max.Add(max, big.NewInt(0).Exp(big2, big.NewInt(int64(mpc.K)), nil))
 
 	// compute 2^(k + s + v) + 2^k + a - r where d is the integer returned from solvedbits
 	maxShare := mpc.CreateShares(max)
-	rev := mpc.RevealShare(mpc.Sub(mpc.Add(a, maxShare), d))
+	rev := mpc.RevealShare(mpc.Sub(mpc.Add(maxShare, a), d))
 
 	// only keep the m least significant bits
 	rev.Mod(rev, big.NewInt(0).Exp(big2, big.NewInt(int64(m)), nil))

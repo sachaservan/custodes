@@ -21,8 +21,6 @@ func (mpc *MPC) EMult(a, b *paillier.Ciphertext) *paillier.Ciphertext {
 	res := mpc.Pk.ECMult(a, rev)
 	res = mpc.Pk.ESub(res, val)
 
-	MultCountPaillier++
-
 	return res
 }
 
