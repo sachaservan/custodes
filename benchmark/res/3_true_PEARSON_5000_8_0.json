@@ -1,16 +1,14 @@
 {
 	"TestType": "PEARSON",
 	"UseShares": true,
-	"PValue": 0.019797983332727826,
+	"PValue": 0.7577722283113838,
 	"DatasetSize": 5000,
 	"NumberOfCategories": 0,
 	"NumberOfParties": 8,
-	"TotalNumberOfShares": 187332,
-	"TotalNumberOfPaillierMults": 0,
-	"TotalNumberOfShareMults": 64279,
-	"TotalTime": 65.451865281,
-	"ComputationTime": 11.67086326,
-	"ComparisonTime": 29.8876817,
-	"DivisionTime": 23.893321075,
+	"TotalNumberOfShares": 123273,
+	"TotalTime": 13.220157538,
+	"ComputationTime": 3.9725755940000003,
+	"ComparisonTime": 4.116891044,
+	"DivisionTime": 5.130691798,
 	"Latency": 0
 }
