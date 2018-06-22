@@ -40,8 +40,8 @@ func main() {
 	networkLatencyCmd := flag.Int("netlat", 0, "average network latency for party communication.")
 	debugCmd := flag.Bool("debug", false, "print debug statements during computation.")
 	useSharesCmd := flag.Bool("shares", false, "use only secret sharing for computations.")
-    
-    	flag.Parse()
+
+	flag.Parse()
 
 	rootDir := *rootDirCmd
 	numParties := *numPartiesCmd
@@ -63,16 +63,16 @@ func main() {
 		Threshold:       threshold,
 		Verify:          false,
 		KeyBits:         512,
-		MessageBits:     64,
+		MessageBits:     100,
 		SecurityBits:    40,
-		FPPrecisionBits: 10,
-		NetworkLatency:  networkLatency}
+		FPPrecisionBits: 30,
+		NetworkLatency:  networkLatency * time.Millisecond}
 
 	mpc := hypocert.NewMPCKeyGen(params)
 
 	fmt.Println("done.")
-    
-	/*filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
+
+	filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
 	filenameChiSq1000_5 := rootDir + "/benchmark/benchmark_chisq_1000_5.csv"
 	filenameChiSq1000_10 := rootDir + "/benchmark/benchmark_chisq_1000_10.csv"
 	filenameChiSq1000_20 := rootDir + "/benchmark/benchmark_chisq_1000_20.csv"
@@ -104,7 +104,7 @@ func main() {
 	runChiSqBechmarks(mpc, filenameChiSq10000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 	runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-        */
+
 	runMultBenchmark(mpc, numParties, networkLatency*time.Millisecond, false, debug)
 
 }

@@ -51,7 +51,6 @@ func (party *Party) RevealShare(share *Share) (*big.Int, error) {
 
 // Store stores a share value
 func (party *Party) Store(share *Share, value *big.Int) {
-	time.Sleep(party.NetworkLatency)
 	party.shares.Store(share.ID, value)
 }
 
@@ -67,14 +66,11 @@ func (party *Party) getShare(shareID int) (*big.Int, error) {
 }
 
 func (party *Party) DeleteAllShares() {
-	time.Sleep(party.NetworkLatency)
 	party.shares = sync.Map{}
 	nextShareId = 0
 }
 
 func (party *Party) StoreAddShare(share *Share, value *big.Int) {
-	time.Sleep(party.NetworkLatency)
-
 	local, err := party.getShare(share.ID)
 	if err != nil {
 		local = big.NewInt(0)
@@ -106,8 +102,6 @@ func (party *Party) Mult(share1, share2 *Share, newId int) (*Share, error) {
 }
 
 func (party *Party) Sub(share1, share2 *Share, newId int) (*Share, error) {
-	time.Sleep(party.NetworkLatency)
-
 	v1, err := party.getShare(share1.ID)
 	if err != nil {
 		return nil, err
@@ -126,8 +120,6 @@ func (party *Party) Sub(share1, share2 *Share, newId int) (*Share, error) {
 }
 
 func (party *Party) Add(share1, share2 *Share, newId int) (*Share, error) {
-	time.Sleep(party.NetworkLatency)
-
 	v1, err := party.getShare(share1.ID)
 	if err != nil {
 		return nil, err
@@ -145,8 +137,6 @@ func (party *Party) Add(share1, share2 *Share, newId int) (*Share, error) {
 }
 
 func (party *Party) MultC(share *Share, c *big.Int, newId int) (*Share, error) {
-	time.Sleep(party.NetworkLatency)
-
 	val, err := party.getShare(share.ID)
 	if err != nil {
 		return nil, err
@@ -161,8 +151,6 @@ func (party *Party) MultC(share *Share, c *big.Int, newId int) (*Share, error) {
 }
 
 func (party *Party) CreateRandomShare(bound *big.Int, id int) *Share {
-	time.Sleep(party.NetworkLatency)
-
 	r := Random(bound)
 	shares, values, id := party.CreateShares(r, id)
 	party.DistributeRandShares(shares, values)
@@ -171,8 +159,6 @@ func (party *Party) CreateRandomShare(bound *big.Int, id int) *Share {
 }
 
 func (party *Party) CopyShare(share *Share, newId int) *Share {
-	time.Sleep(party.NetworkLatency)
-
 	val, err := party.getShare(share.ID)
 	if err != nil {
 		return nil
