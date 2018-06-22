@@ -80,7 +80,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
                 comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []   
        
     for d in data:
-        if d['TestType'] == type:
+        if d['TestType'] == type and d['UseShares'] == shares:
             comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComputationTime'])
             divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['DivisionTime'])
             comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComparisonTime'])
@@ -120,7 +120,8 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
                 
                 p1 = ax1.bar(pos, mean_comp, width, yerr=std_comp, color=flatui[0])            
                 p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=std_div, color=flatui[1], hatch='//')
-                #p3 = ax1.bar(pos, mean_compare, width, bottom=mean_div, yerr=std_compare, color=flatui[3], hatch='+')
+                if mean_compare != 0:
+                    p3 = ax1.bar(pos, mean_compare, width, bottom=mean_div + mean_comp, yerr=std_compare, color=flatui[3], hatch='\\')
           
     # label
     axis_to_data = ax1.transAxes + ax1.transData.inverted()
@@ -181,7 +182,10 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     elif ymax / step > 20:
         step = 5 * 60
     plt.yticks(range(0, int(ymax), step))
-    plt.legend((p1[0], p2[0]), ('computation', 'division', 'compare'))
+    if p3 is not None:
+        plt.legend((p1[0], p2[0], p3[0]), ('computation', 'division', 'compare'))
+    else:
+        plt.legend((p1[0], p2[0]), ('computation', 'division'))
     
     mode = 'noshares'
     if shares:
@@ -191,8 +195,8 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     
     if show:
         plt.show()    
-    
-            
+        
+        
     
 
 if __name__== "__main__":
@@ -203,6 +207,10 @@ if __name__== "__main__":
         with open(filename) as f:
             data = json.load(f)
             all_runs.append(data)
+            
+    for d in all_runs:
+        if d['TestType'] == 'TTEST' and d['UseShares'] == True and d['NumberOfParties'] == 16 and d['DatasetSize'] == 10000:
+            print (d['DivisionTime'])
     
     runtime_bar('CHI2', all_runs, True, True, show, (14, 4))    
     runtime_bar('TTEST', all_runs, True, False, show, (6, 4))
