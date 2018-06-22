@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"sync"
 
-	"hypocert/node"
+	"hypocert/party"
 )
 
 // set/propagate/kill wrapper used in the
@@ -22,8 +22,6 @@ const (
 	BooleanOR  BooleanFunction = iota
 	BooleanXOR BooleanFunction = iota
 )
-
-//////////////////////////////////////////
 
 // RandomBits returns a random bit vector from {0,1}^l
 func (mpc *MPC) RandomBits(m int) []*node.Share {

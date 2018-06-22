@@ -45,7 +45,6 @@ type PartialDecryptElement struct {
 }
 
 func (party *Party) RevealShare(share *Share) (*big.Int, error) {
-	time.Sleep(party.NetworkLatency)
 	return party.getShare(share.ID)
 }
 
@@ -81,8 +80,6 @@ func (party *Party) StoreAddShare(share *Share, value *big.Int) {
 }
 
 func (party *Party) Mult(share1, share2 *Share, newId int) (*Share, error) {
-	time.Sleep(party.NetworkLatency)
-
 	v1, err := party.getShare(share1.ID)
 	if err != nil {
 		return nil, err

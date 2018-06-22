@@ -4,11 +4,12 @@ import (
 	"crypto/rand"
 	"math"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/sachaservan/paillier"
 
-	"hypocert/node"
+	"hypocert/party"
 )
 
 // Constants
@@ -53,15 +54,22 @@ func (mpc *MPC) RevealShareFP(share *node.Share, scale int) *big.Float {
 
 func (mpc *MPC) RevealShare(share *node.Share) *big.Int {
 
+	var wg sync.WaitGroup
 	values := make([]*big.Int, mpc.Threshold)
 	for i := 0; i < mpc.Threshold; i++ {
-		val, err := mpc.Parties[i].RevealShare(share)
-		if err != nil {
-			panic(err)
-		}
-		val.Mul(val, mpc.Parties[i].BetaT)
-		values[i] = val
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			val, err := mpc.Parties[i].RevealShare(share)
+			if err != nil {
+				panic(err)
+			}
+			val.Mul(val, mpc.Parties[i].BetaT)
+			values[i] = val
+		}(i)
 	}
+
+	wg.Wait()
 
 	return mpc.ReconstructShare(values)
 }
@@ -152,12 +160,19 @@ func (mpc *MPC) MultC(share *node.Share, c *big.Int) *node.Share {
 
 	var res *node.Share
 	var err error
+	var wg sync.WaitGroup
 	for i := 0; i < len(mpc.Parties); i++ {
-		res, err = mpc.Parties[i].MultC(share, c, id)
-		if err != nil {
-			panic(err)
-		}
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			res, err = mpc.Parties[i].MultC(share, c, id)
+			if err != nil {
+				panic(err)
+			}
+		}(i)
 	}
+
+	wg.Wait()
 
 	return res
 }
@@ -168,23 +183,19 @@ func (mpc *MPC) Mult(share1, share2 *node.Share) *node.Share {
 
 	var res *node.Share
 	var err error
+	var wg sync.WaitGroup
 	for i := 0; i < len(mpc.Parties); i++ {
-		res, err = mpc.Parties[i].Mult(share1, share2, id)
-		if err != nil {
-			panic(err)
-		}
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			res, err = mpc.Parties[i].Mult(share1, share2, id)
+			if err != nil {
+				panic(err)
+			}
+		}(i)
 	}
 
-	return res
-}
-
-func (mpc *MPC) PaillierToShare(ct *paillier.Ciphertext) *node.Share {
-
-	bound := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.S)), nil)
-	r, rshare := mpc.ERandomAndShare(bound)
-	val := mpc.RevealInt(mpc.Pk.EAdd(ct, r))
-	share := mpc.CreateShares(val)
-	res := mpc.Sub(share, rshare)
+	wg.Wait()
 
 	return res
 }
@@ -304,49 +315,6 @@ func (mpc *MPC) TruncPR(a *node.Share, k, m int) *node.Share {
 	return res
 }
 
-func (mpc *MPC) RevealInt(ciphertext *paillier.Ciphertext) *big.Int {
-
-	var val *big.Int
-	var err error
-
-	if !mpc.Verify {
-		partialDecrypts := make([]*paillier.PartialDecryption, len(mpc.Parties))
-
-		for i := 0; i < len(mpc.Parties); i++ {
-			partialDecrypts[i] = mpc.Parties[i].PartialDecrypt(ciphertext)
-		}
-
-		val, err = mpc.Party.Sk.CombinePartialDecryptions(partialDecrypts)
-		if err != nil {
-			panic(err)
-		}
-
-	} else {
-
-		partialDecryptsZkps := make([]*paillier.PartialDecryptionZKP, len(mpc.Parties))
-
-		for i := 0; i < len(mpc.Parties); i++ {
-			partialDecryptsZkps[i] = mpc.Parties[i].PartialDecryptAndProof(ciphertext)
-		}
-
-		val, err = mpc.Party.Sk.CombinePartialDecryptionsZKP(partialDecryptsZkps)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	return val
-}
-
-func (mpc *MPC) RevealFP(ciphertext *paillier.Ciphertext, scale int) *big.Float {
-
-	val := mpc.RevealInt(ciphertext)
-	scaleFactor := big.NewInt(0).Exp(big2, big.NewInt(int64(scale)), nil)
-	fp := big.NewFloat(0.0).SetInt(val)
-	fp.Quo(fp, big.NewFloat(0.0).SetInt(scaleFactor))
-	return fp
-}
-
 func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 
 	nu := int(math.Log2(float64(params.NumParties)))
@@ -354,7 +322,7 @@ func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 		panic("modulus not big enough for given parameters")
 	}
 
-	shareModulusBits := 2*params.MessageBits + params.FPPrecisionBits + params.SecurityBits + 1
+	shareModulusBits := 2*params.MessageBits + params.FPPrecisionBits + params.SecurityBits + nu + 1
 	secretSharePrime, err := rand.Prime(rand.Reader, shareModulusBits)
 
 	tkh := paillier.GetThresholdKeyGenerator(params.KeyBits, params.NumParties, params.Threshold, rand.Reader)

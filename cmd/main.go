@@ -55,7 +55,7 @@ func main() {
 		panic("Threshold is too high compared to the number of parties!")
 	}
 
-	runtime.GOMAXPROCS(numParties * 2)
+	runtime.GOMAXPROCS(2 * numParties)
 
 	fmt.Print("Generating keys...")
 	params := &hypocert.MPCKeyGenParams{
@@ -72,38 +72,38 @@ func main() {
 
 	fmt.Println("done.")
 
-	filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
-	filenameChiSq1000_5 := rootDir + "/benchmark/benchmark_chisq_1000_5.csv"
-	filenameChiSq1000_10 := rootDir + "/benchmark/benchmark_chisq_1000_10.csv"
-	filenameChiSq1000_20 := rootDir + "/benchmark/benchmark_chisq_1000_20.csv"
+	// filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
+	// filenameChiSq1000_5 := rootDir + "/benchmark/benchmark_chisq_1000_5.csv"
+	// filenameChiSq1000_10 := rootDir + "/benchmark/benchmark_chisq_1000_10.csv"
+	// filenameChiSq1000_20 := rootDir + "/benchmark/benchmark_chisq_1000_20.csv"
 
-	filename5000 := rootDir + "/benchmark/benchmark_5000.csv"
-	filenameChiSq5000_5 := rootDir + "/benchmark/benchmark_chisq_5000_5.csv"
-	filenameChiSq5000_10 := rootDir + "/benchmark/benchmark_chisq_5000_10.csv"
-	filenameChiSq5000_20 := rootDir + "/benchmark/benchmark_chisq_5000_20.csv"
+	// filename5000 := rootDir + "/benchmark/benchmark_5000.csv"
+	// filenameChiSq5000_5 := rootDir + "/benchmark/benchmark_chisq_5000_5.csv"
+	// filenameChiSq5000_10 := rootDir + "/benchmark/benchmark_chisq_5000_10.csv"
+	// filenameChiSq5000_20 := rootDir + "/benchmark/benchmark_chisq_5000_20.csv"
 
-	filename10000 := rootDir + "/benchmark/benchmark_10000.csv"
-	filenameChiSq10000_5 := rootDir + "/benchmark/benchmark_chisq_10000_5.csv"
-	filenameChiSq10000_10 := rootDir + "/benchmark/benchmark_chisq_10000_10.csv"
-	filenameChiSq10000_20 := rootDir + "/benchmark/benchmark_chisq_10000_20.csv"
+	// filename10000 := rootDir + "/benchmark/benchmark_10000.csv"
+	// filenameChiSq10000_5 := rootDir + "/benchmark/benchmark_chisq_10000_5.csv"
+	// filenameChiSq10000_10 := rootDir + "/benchmark/benchmark_chisq_10000_10.csv"
+	// filenameChiSq10000_20 := rootDir + "/benchmark/benchmark_chisq_10000_20.csv"
 
-	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 
-	runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runPearsonsBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runPearsonsBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runPearsonsBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runPearsonsBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 
-	runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runChiSqBechmarks(mpc, filenameChiSq1000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runChiSqBechmarks(mpc, filenameChiSq5000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runChiSqBechmarks(mpc, filenameChiSq5000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runChiSqBechmarks(mpc, filenameChiSq5000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runChiSqBechmarks(mpc, filenameChiSq10000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-	runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runChiSqBechmarks(mpc, filenameChiSq1000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runChiSqBechmarks(mpc, filenameChiSq5000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runChiSqBechmarks(mpc, filenameChiSq5000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runChiSqBechmarks(mpc, filenameChiSq5000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runChiSqBechmarks(mpc, filenameChiSq10000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
+	// runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
 
 	runMultBenchmark(mpc, numParties, networkLatency*time.Millisecond, false, debug)
 
@@ -327,24 +327,22 @@ func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, z
 	multTimePaillier := time.Duration(0)
 	multTimeShares := time.Duration(0)
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10000; i++ {
 		stime := time.Now()
 		mpc.EMult(a, b)
 		endTime := time.Now()
 		multTimePaillier += endTime.Sub(stime)
 	}
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10000; i++ {
 		stime := time.Now()
 		mpc.Mult(ashare, bshare)
 		endTime := time.Now()
 		multTimeShares += endTime.Sub(stime)
 	}
 
-	fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0))
-	fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0))
-	fmt.Printf("Network latency (s):  %f\n", latency.Seconds())
-
+	fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*10000.0))
+	fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*10000.0))
 }
 
 func printWelcome() {
@@ -357,7 +355,7 @@ func printWelcome() {
 	fmt.Println("|_|  |_|\\__, | .__/ \\___/ \\_____\\___|_|   \\__|")
 	fmt.Println("	 __/ | |                              ")
 	fmt.Println("	|___/|_|                           ")
-	fmt.Println("Secure Hypothesis Testing")
+	fmt.Println("Certified Hypothesis Testing")
 	fmt.Println("=====================================")
 
 }
