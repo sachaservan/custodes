@@ -30,8 +30,6 @@ type Report struct {
 func main() {
 	printWelcome()
 
-	runtime.GOMAXPROCS(40)
-
 	// Command line arguments
 	rootDirCmd := flag.String("rootdir", "", "full path to project dir.")
 	numPartiesCmd := flag.Int("parties", 3, "integer number of parties >= 3.")
@@ -56,6 +54,8 @@ func main() {
 	if numParties < 2*threshold-1 {
 		panic("Threshold is too high compared to the number of parties!")
 	}
+
+	runtime.GOMAXPROCS(numParties * 2)
 
 	fmt.Print("Generating keys...")
 	params := &hypocert.MPCKeyGenParams{
