@@ -84,8 +84,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
             comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComputationTime'])
             divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['DivisionTime'])
             comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComparisonTime'])
-            
-    print(numParties, datasetSizes)        
+                   
     width = 0.15    
     gap = 0.02
     f, (ax1) = plt.subplots(1, 1, sharey=False, figsize=size)
@@ -177,7 +176,9 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     ax1.yaxis.set_major_formatter(formatter)
     ymin, ymax = ax1.get_ylim()
     step = 60
-    if ymax / step > 9 and ymax / step < 20:
+    if ymax / step < 5:
+        step = 10    
+    elif ymax / step > 9 and ymax / step < 20:
         step = 2 * 60
     elif ymax / step > 20:
         step = 5 * 60
@@ -201,16 +202,15 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
 
 if __name__== "__main__":
     show = True
+    print ('TestType', 'UseShares', 'NumberOfParties', 'DatasetSize',  'PValue', 'TotalTime')
     
     all_runs = []
     for filename in glob.glob("./res/*.json"):
         with open(filename) as f:
             data = json.load(f)
             all_runs.append(data)
+            print (data['TestType'], data['UseShares'], data['NumberOfParties'], data['DatasetSize'],  data['PValue'], data['TotalTime'])
             
-    for d in all_runs:
-        if d['TestType'] == 'TTEST' and d['UseShares'] == True and d['NumberOfParties'] == 16 and d['DatasetSize'] == 10000:
-            print (d['DivisionTime'])
     
     runtime_bar('CHI2', all_runs, True, True, show, (14, 4))    
     runtime_bar('TTEST', all_runs, True, False, show, (6, 4))
