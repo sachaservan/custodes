@@ -73,20 +73,20 @@ func main() {
 
 	fmt.Println("done.")
 
-	// filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
-	// filenameChiSq1000_5 := rootDir + "/benchmark/benchmark_chisq_1000_5.csv"
-	// filenameChiSq1000_10 := rootDir + "/benchmark/benchmark_chisq_1000_10.csv"
-	// filenameChiSq1000_20 := rootDir + "/benchmark/benchmark_chisq_1000_20.csv"
+	filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
+	filenameChiSq1000_5 := rootDir + "/benchmark/benchmark_chisq_1000_5.csv"
+	filenameChiSq1000_10 := rootDir + "/benchmark/benchmark_chisq_1000_10.csv"
+	filenameChiSq1000_20 := rootDir + "/benchmark/benchmark_chisq_1000_20.csv"
 
-	// filename5000 := rootDir + "/benchmark/benchmark_5000.csv"
-	// filenameChiSq5000_5 := rootDir + "/benchmark/benchmark_chisq_5000_5.csv"
-	// filenameChiSq5000_10 := rootDir + "/benchmark/benchmark_chisq_5000_10.csv"
-	// filenameChiSq5000_20 := rootDir + "/benchmark/benchmark_chisq_5000_20.csv"
+	filename5000 := rootDir + "/benchmark/benchmark_5000.csv"
+	filenameChiSq5000_5 := rootDir + "/benchmark/benchmark_chisq_5000_5.csv"
+	filenameChiSq5000_10 := rootDir + "/benchmark/benchmark_chisq_5000_10.csv"
+	filenameChiSq5000_20 := rootDir + "/benchmark/benchmark_chisq_5000_20.csv"
 
-	// filename10000 := rootDir + "/benchmark/benchmark_10000.csv"
-	// filenameChiSq10000_5 := rootDir + "/benchmark/benchmark_chisq_10000_5.csv"
-	// filenameChiSq10000_10 := rootDir + "/benchmark/benchmark_chisq_10000_10.csv"
-	// filenameChiSq10000_20 := rootDir + "/benchmark/benchmark_chisq_10000_20.csv"
+	filename10000 := rootDir + "/benchmark/benchmark_10000.csv"
+	filenameChiSq10000_5 := rootDir + "/benchmark/benchmark_chisq_10000_5.csv"
+	filenameChiSq10000_10 := rootDir + "/benchmark/benchmark_chisq_10000_10.csv"
+	filenameChiSq10000_20 := rootDir + "/benchmark/benchmark_chisq_10000_20.csv"
 
     if (*justMultCmd) {
         runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
@@ -106,8 +106,7 @@ func main() {
         runChiSqBechmarks(mpc, filenameChiSq10000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
         runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
         runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
-    }
-    else {
+    } else {
         runMultBenchmark(mpc, numParties, networkLatency*time.Millisecond, false, debug)
     }
 }
