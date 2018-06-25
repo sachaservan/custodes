@@ -55,7 +55,7 @@ func main() {
 		panic("Threshold is too high compared to the number of parties!")
 	}
 
-	runtime.GOMAXPROCS(numParties)
+	runtime.GOMAXPROCS(2 * numParties)
 
 	fmt.Print("Generating keys...")
 	params := &hypocert.MPCKeyGenParams{
@@ -327,22 +327,22 @@ func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, z
 	multTimePaillier := time.Duration(0)
 	multTimeShares := time.Duration(0)
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		stime := time.Now()
 		mpc.EMult(a, b)
 		endTime := time.Now()
 		multTimePaillier += endTime.Sub(stime)
 	}
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		stime := time.Now()
 		mpc.Mult(ashare, bshare)
 		endTime := time.Now()
 		multTimeShares += endTime.Sub(stime)
 	}
 
-	fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*10000.0))
-	fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*10000.0))
+	fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*100.0))
+	fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*100.0))
 }
 
 func printWelcome() {
