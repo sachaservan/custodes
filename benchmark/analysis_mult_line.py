@@ -49,10 +49,10 @@ def multiplication_line(show, size):
     
     f, (ax1) = plt.subplots(1, 1, sharey=False, figsize=size)
     df = pd.read_csv('multiplication_times.csv')
-    sns.pointplot(x="numparties", y="shares", data=df, ax=ax1, color=flatui[0])
-    sns.pointplot(x="numparties", y="paillier", data=df, ax=ax1, color=flatui[1], linestyles='--')
+    plt.plot(df["numparties"], df["shares"],color=flatui[0], marker='o', label='shares multiplication')
+    plt.plot(df["numparties"], df["paillier"],color=flatui[1],linestyle='--',  marker='o', label='paillier multiplication')
     
-    ax1.legend(handles=ax1.lines[::len(df)+1], labels=['shares multiplication', 'paillier multiplication'])
+    ax1.legend()
         
     ax1.set_ylabel('time (ms)')
     ax1.set_xlabel('number of parties')   
