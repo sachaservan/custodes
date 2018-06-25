@@ -107,6 +107,7 @@ func main() {
         runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
         runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
     } else {
+        runtime.GOMAXPROCS(numParties)
         runMultBenchmark(mpc, numParties, networkLatency*time.Millisecond, false, debug)
     }
 }
@@ -329,22 +330,22 @@ func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, z
 	multTimePaillier := time.Duration(0)
 	multTimeShares := time.Duration(0)
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1000; i++ {
 		stime := time.Now()
 		mpc.EMult(a, b)
 		endTime := time.Now()
 		multTimePaillier += endTime.Sub(stime)
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1000; i++ {
 		stime := time.Now()
 		mpc.Mult(ashare, bshare)
 		endTime := time.Now()
 		multTimeShares += endTime.Sub(stime)
 	}
 
-	fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*100.0))
-	fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*100.0))
+	fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0))
+	fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0))
 }
 
 func printWelcome() {
