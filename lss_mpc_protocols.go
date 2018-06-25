@@ -55,8 +55,8 @@ func (mpc *MPC) RevealShareFP(share *node.Share, scale int) *big.Float {
 func (mpc *MPC) RevealShare(share *node.Share) *big.Int {
 
 	var wg sync.WaitGroup
-	values := make([]*big.Int, mpc.Threshold)
-	for i := 0; i < mpc.Threshold; i++ {
+	values := make([]*big.Int, len(mpc.Parties))
+	for i := 0; i < len(mpc.Parties); i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -71,7 +71,7 @@ func (mpc *MPC) RevealShare(share *node.Share) *big.Int {
 
 	wg.Wait()
 
-	return mpc.ReconstructShare(values)
+	return mpc.ReconstructShare(values[0:mpc.Threshold])
 }
 
 func (mpc *MPC) DeleteAllShares() int {
