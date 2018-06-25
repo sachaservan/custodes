@@ -88,7 +88,7 @@ func main() {
 	filenameChiSq10000_10 := rootDir + "/benchmark/benchmark_chisq_10000_10.csv"
 	filenameChiSq10000_20 := rootDir + "/benchmark/benchmark_chisq_10000_20.csv"
 
-    if (*justMultCmd) {
+    if !(*justMultCmd) {
         runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
         runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
         runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, false, useShares, debug, *runIdCmd)
