@@ -10,4 +10,5 @@ for i in {0..5} ; do
     ../cmd/hypocert -parties 5 -threshold 3 -rootdir "/data/ez/go/src/hypocert" -netlat 0 -runid "$i" -shares
     ../cmd/hypocert -parties 9 -threshold 5 -rootdir "/data/ez/go/src/hypocert" -netlat 0 -runid "$i" -shares
     ../cmd/hypocert -parties 17 -threshold 9 -rootdir "/data/ez/go/src/hypocert" -netlat 0 -runid "$i" -shares
+    ../cmd/hypocert -parties 35 -threshold 17 -rootdir "/data/ez/go/src/hypocert" -netlat 0 -runid "$i" -shares
 done

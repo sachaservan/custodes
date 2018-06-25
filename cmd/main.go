@@ -56,7 +56,7 @@ func main() {
 		panic("Threshold is too high compared to the number of parties!")
 	}
 
-	runtime.GOMAXPROCS(2 * numParties)
+	runtime.GOMAXPROCS(numParties)
 
 	fmt.Print("Generating keys...")
 	params := &hypocert.MPCKeyGenParams{
