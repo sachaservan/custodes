@@ -50,8 +50,8 @@ func main() {
 	debug := *debugCmd
 	useShares := *useSharesCmd
 
-	fmt.Println("dummy " + rootDir + " " + strconv.FormatBool(useShares) + " " + strconv.Itoa(*runIdCmd))
-	fmt.Println("num parties " + strconv.Itoa(numParties))
+	//fmt.Println("dummy " + rootDir + " " + strconv.FormatBool(useShares) + " " + strconv.Itoa(*runIdCmd))
+	//fmt.Println("num parties " + strconv.Itoa(numParties))
 
 	if numParties < 2*threshold-1 {
 		panic("Threshold is too high compared to the number of parties!")
@@ -59,7 +59,7 @@ func main() {
 
 	runtime.GOMAXPROCS(2 * numParties)
 
-	fmt.Print("Generating keys...")
+	//fmt.Print("Generating keys...")
 	params := &hypocert.MPCKeyGenParams{
 		NumParties:      numParties,
 		Threshold:       threshold,
@@ -72,7 +72,7 @@ func main() {
 
 	mpc := hypocert.NewMPCKeyGen(params)
 
-	fmt.Println("done.")
+	//fmt.Println("done.")
 
 	filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
 	filenameChiSq1000_5 := rootDir + "/benchmark/benchmark_chisq_1000_5.csv"
@@ -357,7 +357,7 @@ func runMultBenchmark(mpc *hypocert.MPC, numParties int, latency time.Duration, 
         strconv.Itoa(numParties) + ", " + 
         strconv.FormatFloat((float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0)), 'f', 6, 64) + ", " + 
         strconv.FormatFloat((float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0)), 'f', 6, 64) + ", " + 
-        (latency * time.Millisecond)); 
+        (latency).String()); 
 	//fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0))
 	//fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0))
 }
