@@ -458,11 +458,7 @@ func (mpc *MPC) BitsLT(a, b []*node.Share) *node.Share {
 	g := make([]*node.Share, degree)
 	g[0] = f[0]
 	for i := degree - 1; i > 0; i-- {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			g[i] = mpc.Sub(f[i], f[i-1])
-		}(i)
+		g[i] = mpc.Sub(f[i], f[i-1])
 	}
 
 	wg.Wait()

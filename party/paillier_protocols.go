@@ -2,11 +2,13 @@ package node
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/sachaservan/paillier"
 )
 
 func (party *Party) GetRandomMultEnc(c *paillier.Ciphertext) (*paillier.Ciphertext, *paillier.Ciphertext) {
+	time.Sleep(party.NetworkLatency)
 	r := paillier.CryptoRandom(party.Pk.N)
 	enc := party.Pk.Encrypt(r)
 	cMult := party.Pk.ECMult(c, r)
@@ -40,6 +42,7 @@ func (party *Party) GetRandomEnc(bound *big.Int) *paillier.Ciphertext {
 }
 
 func (party *Party) PartialDecrypt(ciphertext *paillier.Ciphertext) *paillier.PartialDecryption {
+	time.Sleep(party.NetworkLatency)
 	partial := party.Sk.Decrypt(ciphertext.C)
 	return partial
 }
