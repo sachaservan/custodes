@@ -49,8 +49,8 @@ def multiplication_line(show, size):
     
     f, (ax1) = plt.subplots(1, 1, sharey=False, figsize=size)
     df = pd.read_csv('multiplication_times.csv')
-    plt.plot(df["numparties"], df["shares"],color=flatui[0], marker='o', label='shares multiplication')
-    plt.plot(df["numparties"], df["paillier"],color=flatui[1],linestyle='--',  marker='o', label='paillier multiplication')
+    plt.plot(df["numparties"], df["shares"],color=flatui[0], marker='o', label='LSS MPC')
+    plt.plot(df["numparties"], df["paillier"],color=flatui[1],linestyle='--',  marker='o', label='Threshold-Paillier MPC')
     
     ax1.legend()
         

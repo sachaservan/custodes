@@ -29,7 +29,7 @@ type Report struct {
 }
 
 func main() {
-	printWelcome()
+	//printWelcome()
 
 	// Command line arguments
 	rootDirCmd := flag.String("rootdir", "", "full path to project dir.")
@@ -320,7 +320,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 	}
 }
 
-func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, zkp bool, debug bool) {
+func runMultBenchmark(mpc *hypocert.MPC, numParties int, latency time.Duration, zkp bool, debug bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -328,9 +328,9 @@ func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, z
 	//**************************************************************************************
 	//**************************************************************************************
 
-	fmt.Println("------------------------------------------------")
-	fmt.Println("Benchmarking Multiplication times...")
-	fmt.Println("------------------------------------------------")
+	//fmt.Println("------------------------------------------------")
+	//fmt.Println("Benchmarking Multiplication times...")
+	//fmt.Println("------------------------------------------------")
 
 	a := mpc.Pk.Encrypt(big.NewInt(1))
 	b := mpc.Pk.Encrypt(big.NewInt(1))
@@ -340,22 +340,26 @@ func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, z
 	multTimePaillier := time.Duration(0)
 	multTimeShares := time.Duration(0)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1000; i++ {
 		stime := time.Now()
 		mpc.EMult(a, b)
 		endTime := time.Now()
 		multTimePaillier += endTime.Sub(stime)
 	}
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1000; i++ {
 		stime := time.Now()
 		mpc.Mult(ashare, bshare)
 		endTime := time.Now()
 		multTimeShares += endTime.Sub(stime)
 	}
-
-	fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*10.0))
-	fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*10.0))
+    fmt.Println(
+        strconv.Itoa(numParties) + ", " + 
+        strconv.FormatFloat((float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0)), 'f', 6, 64) + ", " + 
+        strconv.FormatFloat((float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0)), 'f', 6, 64) + ", " + 
+        (latency * time.Millisecond)); 
+	//fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0))
+	//fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0))
 }
 
 func printWelcome() {
