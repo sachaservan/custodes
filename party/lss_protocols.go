@@ -13,6 +13,7 @@ import (
 
 var nextShareId = 0
 var shareIdMutex sync.Mutex
+var multMutex sync.Mutex
 
 type Party struct {
 	ID             int
@@ -51,7 +52,6 @@ func (party *Party) RevealShare(share *Share) (*big.Int, error) {
 
 // Store stores a share value
 func (party *Party) Store(share *Share, value *big.Int) {
-	time.Sleep(party.NetworkLatency)
 	party.shares.Store(share.ID, value)
 }
 
@@ -72,6 +72,7 @@ func (party *Party) DeleteAllShares() {
 }
 
 func (party *Party) StoreAddShare(share *Share, value *big.Int) {
+	multMutex.Lock()
 	local, err := party.getShare(share.ID)
 	if err != nil {
 		local = big.NewInt(0)
@@ -79,10 +80,12 @@ func (party *Party) StoreAddShare(share *Share, value *big.Int) {
 
 	local.Add(local, value)
 	party.shares.Store(share.ID, local)
+	multMutex.Unlock()
 }
 
 func (party *Party) Mult(share1, share2 *Share, newId int) (*Share, error) {
 	time.Sleep(party.NetworkLatency)
+
 	v1, err := party.getShare(share1.ID)
 	if err != nil {
 		return nil, err
@@ -96,6 +99,7 @@ func (party *Party) Mult(share1, share2 *Share, newId int) (*Share, error) {
 	z.Mul(z, party.BetaN)
 
 	shares, values, _ := party.CreateShares(z, newId)
+
 	party.DistributeMultShares(shares, values)
 
 	return &Share{party.ID, newId}, nil
@@ -151,6 +155,8 @@ func (party *Party) MultC(share *Share, c *big.Int, newId int) (*Share, error) {
 }
 
 func (party *Party) CreateRandomShare(bound *big.Int, id int) *Share {
+	time.Sleep(party.NetworkLatency)
+
 	r := Random(bound)
 	shares, values, id := party.CreateShares(r, id)
 	party.DistributeRandShares(shares, values)
@@ -159,6 +165,7 @@ func (party *Party) CreateRandomShare(bound *big.Int, id int) *Share {
 }
 
 func (party *Party) CopyShare(share *Share, newId int) *Share {
+
 	val, err := party.getShare(share.ID)
 	if err != nil {
 		return nil

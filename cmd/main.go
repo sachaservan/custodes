@@ -20,6 +20,7 @@ type Report struct {
 	NumberOfCategories  int
 	NumberOfParties     int
 	TotalNumberOfShares int
+	DealerSetupTime     float64
 	TotalTime           float64
 	ComputationTime     float64
 	ComparisonTime      float64
@@ -56,7 +57,7 @@ func main() {
 		panic("Threshold is too high compared to the number of parties!")
 	}
 
-	runtime.GOMAXPROCS(numParties)
+	runtime.GOMAXPROCS(2 * numParties)
 
 	fmt.Print("Generating keys...")
 	params := &hypocert.MPCKeyGenParams{
@@ -127,13 +128,14 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	var chi2test *big.Float
 	var datasetSize int
 	var numCategories int
+	var dealerSetupTime time.Duration
 	var totalTime time.Duration
 	var paillierTime time.Duration
 	var divTime time.Duration
 	var numSharesCreated int
 
 	if onlyUseShares {
-		chi2test, datasetSize, numCategories, totalTime, paillierTime, divTime, numSharesCreated = exampleChiSquaredSimulationWithSecretSharing(mpc, filename, debug)
+		chi2test, datasetSize, numCategories, dealerSetupTime, totalTime, paillierTime, divTime, numSharesCreated = exampleChiSquaredSimulationWithSecretSharing(mpc, filename, debug)
 	} else {
 		chi2test, datasetSize, numCategories, totalTime, paillierTime, divTime, numSharesCreated = exampleChiSquaredSimulation(mpc, filename, debug)
 	}
@@ -146,6 +148,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	fmt.Printf("Threshold:                       %d\n", mpc.Threshold)
 	//fmt.Printf("Zero-Knowledge Proofs:           %t\n", zkp)
 	fmt.Printf("Total number of shares:          %d\n", numSharesCreated)
+	fmt.Printf("Dealer setup time (s): 	         %f\n", dealerSetupTime.Seconds())
 	fmt.Printf("Chi^2 Test runtime (s):          %f\n", totalTime.Seconds())
 	fmt.Printf("  Computation runtime (s):       %f\n", paillierTime.Seconds())
 	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
@@ -162,6 +165,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 		NumberOfCategories:  numCategories,
 		NumberOfParties:     numParties,
 		TotalNumberOfShares: numSharesCreated,
+		DealerSetupTime:     dealerSetupTime.Seconds(),
 		TotalTime:           totalTime.Seconds(),
 		ComputationTime:     paillierTime.Seconds(),
 		DivisionTime:        divTime.Seconds(),
@@ -190,13 +194,14 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 
 	var ttest *big.Float
 	var datasetSize int
+	var dealerSetupTime time.Duration
 	var totalTime time.Duration
 	var paillierTime time.Duration
 	var divTime time.Duration
 	var numSharesCreated int
 
 	if onlyUseShares {
-		ttest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated = exampleTTestSimulationWithSecretSharing(mpc, filename, debug)
+		ttest, datasetSize, dealerSetupTime, totalTime, paillierTime, divTime, numSharesCreated = exampleTTestSimulationWithSecretSharing(mpc, filename, debug)
 	} else {
 		ttest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated = exampleTTestSimulation(mpc, filename, debug)
 	}
@@ -208,6 +213,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	fmt.Printf("Threshold:                       %d\n", mpc.Threshold)
 	//fmt.Printf("Zero-Knowledge Proofs:           %t\n", zkp)
 	fmt.Printf("Total number of shares:      	 %d\n", numSharesCreated)
+	fmt.Printf("Dealer setup time (s): 	         %f\n", dealerSetupTime.Seconds())
 	fmt.Printf("T-Test runtime (s): 	         %f\n", totalTime.Seconds())
 	fmt.Printf("  Computation runtime (s):       %f\n", paillierTime.Seconds())
 	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
@@ -224,6 +230,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 		NumberOfCategories:  0,
 		NumberOfParties:     numParties,
 		TotalNumberOfShares: numSharesCreated,
+		DealerSetupTime:     dealerSetupTime.Seconds(),
 		TotalTime:           totalTime.Seconds(),
 		ComputationTime:     paillierTime.Seconds(),
 		DivisionTime:        divTime.Seconds(),
@@ -258,6 +265,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 
 	var ptest *big.Float
 	var datasetSize int
+	var dealerSetupTime time.Duration
 	var totalTime time.Duration
 	var computeTime time.Duration
 	var divTime time.Duration
@@ -265,7 +273,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 	var numSharesCreated int
 
 	if onlyUseShares {
-		ptest, datasetSize, totalTime, computeTime, cmpTime, divTime, numSharesCreated = examplePearsonsTestSimulationWihSecretSharing(mpc, filename, debug)
+		ptest, datasetSize, dealerSetupTime, totalTime, computeTime, cmpTime, divTime, numSharesCreated = examplePearsonsTestSimulationWihSecretSharing(mpc, filename, debug)
 	} else {
 		ptest, datasetSize, totalTime, computeTime, cmpTime, divTime, numSharesCreated = examplePearsonsTestSimulation(mpc, filename, debug)
 	}
@@ -277,6 +285,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 	fmt.Printf("Threshold:                       %d\n", mpc.Threshold)
 	//fmt.Printf("Zero-Knowledge Proofs:           %t\n", zkp)
 	fmt.Printf("Total number of shares:          %d\n", numSharesCreated)
+	fmt.Printf("Dealer setup time (s): 	         %f\n", dealerSetupTime.Seconds())
 	fmt.Printf("Pearson's Test runtime (s):      %f\n", totalTime.Seconds())
 	fmt.Printf("  Computation runtime (s):       %f\n", computeTime.Seconds())
 	fmt.Printf("  Comparison runtime (s):        %f\n", cmpTime.Seconds())
@@ -294,6 +303,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 		NumberOfCategories:  0,
 		NumberOfParties:     numParties,
 		TotalNumberOfShares: numSharesCreated,
+		DealerSetupTime:     dealerSetupTime.Seconds(),
 		TotalTime:           totalTime.Seconds(),
 		ComputationTime:     computeTime.Seconds(),
 		ComparisonTime:      cmpTime.Seconds(),

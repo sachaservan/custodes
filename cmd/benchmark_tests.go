@@ -480,13 +480,14 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 	return tstat, len(x), totalTime, paillierTime, divTime, numShares
 }
 
-func exampleChiSquaredSimulationWithSecretSharing(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, int, time.Duration, time.Duration, time.Duration, int) {
+func exampleChiSquaredSimulationWithSecretSharing(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
 
 	//**************************************************************************************
 	//**************************************************************************************
 	// START DEALER CODE
 	//**************************************************************************************
 	//**************************************************************************************
+	dealerSetupStart := time.Now()
 
 	x, err := parseCategoricalDataset(filepath)
 	if err != nil {
@@ -499,26 +500,24 @@ func exampleChiSquaredSimulationWithSecretSharing(mpc *hypocert.MPC, filepath st
 	var eX [][]*node.Share
 	eX = make([][]*node.Share, numRows)
 
-	var wg sync.WaitGroup
 	for i := 0; i < numRows; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			eX[i] = make([]*node.Share, numCategories)
-			for j := 0; j < numCategories; j++ {
-				pt := mpc.Pk.EncodeFixedPoint(big.NewFloat(float64(x[i][j])), mpc.FPPrecBits)
-				eX[i][j] = mpc.CreateShares(pt)
-			}
-		}(i)
+
+		eX[i] = make([]*node.Share, numCategories)
+		for j := 0; j < numCategories; j++ {
+			pt := mpc.Pk.EncodeFixedPoint(big.NewFloat(float64(x[i][j])), mpc.FPPrecBits)
+			eX[i][j] = mpc.CreateShares(pt)
+		}
 	}
 
-	wg.Wait()
+	dealerSetupTime := time.Now().Sub(dealerSetupStart)
 
 	//**************************************************************************************
 	//**************************************************************************************
 	// END DEALER CODE
 	//**************************************************************************************
 	//**************************************************************************************
+
+	var wg sync.WaitGroup
 
 	if debug {
 		fmt.Println("[DEBUG] Dealer setup done...")
@@ -606,16 +605,17 @@ func exampleChiSquaredSimulationWithSecretSharing(mpc *hypocert.MPC, filepath st
 		log.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
 	}
 
-	return chi2Stat, numRows, numCategories, totalTime, paillierTime, divTime, mpc.DeleteAllShares()
+	return chi2Stat, numRows, numCategories, dealerSetupTime, totalTime, paillierTime, divTime, mpc.DeleteAllShares()
 }
 
-func exampleTTestSimulationWithSecretSharing(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
+func exampleTTestSimulationWithSecretSharing(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
 
 	//**************************************************************************************
 	//**************************************************************************************
 	// START DEALER CODE
 	//**************************************************************************************
 	//**************************************************************************************
+	dealerSetupStart := time.Now()
 	x, y, err := parseDataset(filepath)
 	if err != nil {
 		panic(err)
@@ -641,6 +641,8 @@ func exampleTTestSimulationWithSecretSharing(mpc *hypocert.MPC, filepath string,
 		eX[i] = mpc.CreateShares(plaintextX)
 		eY[i] = mpc.CreateShares(plaintextY)
 	}
+
+	dealerSetupTime := time.Now().Sub(dealerSetupStart)
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -752,17 +754,19 @@ func exampleTTestSimulationWithSecretSharing(mpc *hypocert.MPC, filepath string,
 
 	numShares := mpc.DeleteAllShares()
 
-	return tstat, len(x), totalTime, compTime, divTime, numShares
+	return tstat, len(x), dealerSetupTime, totalTime, compTime, divTime, numShares
 }
 
 // Simulation of Pearson's coorelation coefficient
-func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
+func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, time.Duration, time.Duration, int) {
 
 	//**************************************************************************************
 	//**************************************************************************************
 	// START DEALER CODE
 	//**************************************************************************************
 	//**************************************************************************************
+	dealerSetupStart := time.Now()
+
 	x, y, err := parseDataset(filepath)
 	if err != nil {
 		panic(err)
@@ -787,6 +791,8 @@ func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath s
 		eX[i] = mpc.CreateShares(plaintextX)
 		eY[i] = mpc.CreateShares(plaintextY)
 	}
+
+	dealerSetupTime := time.Now().Sub(dealerSetupStart)
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -921,7 +927,7 @@ func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath s
 
 	numShares := mpc.DeleteAllShares()
 
-	return pstat, len(x), totalTime, computeTime, cmpTime, divTime, numShares
+	return pstat, len(x), dealerSetupTime, totalTime, computeTime, cmpTime, divTime, numShares
 }
 
 func parseCategoricalDataset(file string) ([][]int64, error) {

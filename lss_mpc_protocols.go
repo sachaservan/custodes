@@ -2,7 +2,6 @@ package hypocert
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math"
 	"math/big"
 	"sync"
@@ -56,8 +55,8 @@ func (mpc *MPC) RevealShareFP(share *node.Share, scale int) *big.Float {
 func (mpc *MPC) RevealShare(share *node.Share) *big.Int {
 
 	var wg sync.WaitGroup
-	values := make([]*big.Int, mpc.Threshold)
-	for i := 0; i < mpc.Threshold; i++ {
+	values := make([]*big.Int, len(mpc.Parties))
+	for i := 0; i < len(mpc.Parties); i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -72,7 +71,7 @@ func (mpc *MPC) RevealShare(share *node.Share) *big.Int {
 
 	wg.Wait()
 
-	return mpc.ReconstructShare(values)
+	return mpc.ReconstructShare(values[0:mpc.Threshold])
 }
 
 func (mpc *MPC) DeleteAllShares() int {
@@ -184,13 +183,20 @@ func (mpc *MPC) Mult(share1, share2 *node.Share) *node.Share {
 
 	var res *node.Share
 	var err error
+	var wg sync.WaitGroup
 
 	for i := 0; i < len(mpc.Parties); i++ {
-		res, err = mpc.Parties[i].Mult(share1, share2, id)
-		if err != nil {
-			panic(err)
-		}
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			res, err = mpc.Parties[i].Mult(share1, share2, id)
+			if err != nil {
+				panic(err)
+			}
+		}(i)
 	}
+
+	wg.Wait()
 
 	return res
 }
@@ -388,12 +394,6 @@ func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 	big2 = big.NewInt(2)
 	big2InvN = big.NewInt(0).ModInverse(big2, pk.N)
 	big2InvP = big.NewInt(0).ModInverse(big2, secretSharePrime)
-
-	testShare := mpc.CreateShares(big.NewInt(99))
-	testShare = mpc.Mult(testShare, testShare)
-	reveal := mpc.RevealShare(testShare)
-
-	fmt.Println("TEsT: " + reveal.String())
 
 	return mpc
 }
