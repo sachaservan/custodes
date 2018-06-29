@@ -177,6 +177,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     ax1.yaxis.set_major_formatter(formatter)
     ymin, ymax = ax1.get_ylim()
     step = 60
+    print ( ymax / step)
     if ymax / step > 9 and ymax / step < 20:
         step = 2 * 60
     elif ymax / step > 20:

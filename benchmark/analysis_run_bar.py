@@ -49,6 +49,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     comptime = {}
     comparetime = {}
     divtime = {}
+    tottime = {}
     
     numParties = []
     datasetSizes = []
@@ -61,6 +62,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
                 datasetSizes.append(d['DatasetSize'])
                 comptime[d['DatasetSize']] = {}
                 divtime[d['DatasetSize']] = {}
+                tottime[d['DatasetSize']] = {}
                 comparetime[d['DatasetSize']] = {}
                 
             if d['NumberOfParties'] not in numParties:
@@ -72,17 +74,20 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
             if d['NumberOfParties'] not in comptime[d['DatasetSize']]:
                 comptime[d['DatasetSize']][d['NumberOfParties']] = {}
                 divtime[d['DatasetSize']][d['NumberOfParties']] = {} 
+                tottime[d['DatasetSize']][d['NumberOfParties']] = {} 
                 comparetime[d['DatasetSize']][d['NumberOfParties']] = {}                  
 
             if d['NumberOfCategories'] not in comptime[d['DatasetSize']][d['NumberOfParties']]:
                 comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []
-                divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []   
+                divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = [] 
+                tottime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []                   
                 comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []   
        
     for d in data:
         if d['TestType'] == type and d['UseShares'] == shares:
             comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComputationTime'])
             divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['DivisionTime'])
+            tottime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['TotalTime'])
             comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComparisonTime'])
                    
     width = 0.15    
@@ -106,21 +111,27 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
             
             for p, numParty in enumerate(numParties):        
                 mean_comp = np.array(comptime[datasetSize][numParty][category]).mean() 
-                std_comp = np.array(comptime[datasetSize][numParty][category]).std()
+                #std_comp = np.array(comptime[datasetSize][numParty][category]).std()
                 mean_div = np.array(divtime[datasetSize][numParty][category]).mean()
-                std_div = np.array(divtime[datasetSize][numParty][category]).std()
+                #std_div = np.array(divtime[datasetSize][numParty][category]).std()
                 mean_compare = np.array(comparetime[datasetSize][numParty][category]).mean()
-                std_compare = np.array(comparetime[datasetSize][numParty][category]).std()
+                tot_std = np.array(tottime[datasetSize][numParty][category]).std()
+                
+                
+                
                 #current_in
                 total_width = width * len(numParties) + gap * (len(numParties) - 1)
                 pos = (idx - total_width / 2 + width / 2) + width * p + gap * p
                 
                 xLabels[datasetSize][category].append((pos, numParty))
                 
-                p1 = ax1.bar(pos, mean_comp, width, yerr=std_comp, color=flatui[0])            
-                p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=std_div, color=flatui[1], hatch='//')
+                p1 = ax1.bar(pos, mean_comp, width, color=flatui[0])            
+                               
                 if mean_compare != 0:
-                    p3 = ax1.bar(pos, mean_compare, width, bottom=mean_div + mean_comp, yerr=std_compare, color=flatui[3], hatch='\\')
+                    p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, color=flatui[1], hatch='//')
+                    p3 = ax1.bar(pos, mean_compare, width, bottom=mean_div + mean_comp,  yerr=tot_std, color=flatui[2], hatch='\\')
+                else:
+                    p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=tot_std, color=flatui[1], hatch='//')
           
     # label
     axis_to_data = ax1.transAxes + ax1.transData.inverted()
@@ -175,13 +186,19 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     formatter = matplotlib.ticker.FuncFormatter(lambda ms, x: time.strftime('%M:%S', time.gmtime(ms)))
     ax1.yaxis.set_major_formatter(formatter)
     ymin, ymax = ax1.get_ylim()
+    
     step = 60
+    print (type, ymax / step)
     if ymax / step < 5:
-        step = 10    
+        step = 20    
     elif ymax / step > 9 and ymax / step < 20:
         step = 2 * 60
-    elif ymax / step > 20:
+    elif ymax / step > 20 and ymax / step < 50:
         step = 5 * 60
+    elif ymax / step > 50:
+        step = 15 * 60
+        formatter = matplotlib.ticker.FuncFormatter(lambda ms, x: time.strftime("%H:%M:%S", time.gmtime(ms)))
+        ax1.yaxis.set_major_formatter(formatter)
     plt.yticks(range(0, int(ymax), step))
     if p3 is not None:
         plt.legend((p1[0], p2[0], p3[0]), ('computation', 'division', 'compare'))
@@ -202,14 +219,15 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
 
 if __name__== "__main__":
     show = True
-    print ('TestType', 'UseShares', 'NumberOfParties', 'DatasetSize',  'PValue', 'TotalTime')
+    data_csv = open('data.csv', 'w')
+    data_csv.write('TestType' + ',' + 'UseShares' + ',' + 'NumberOfParties' + ',' + 'DatasetSize' + ',' +  'PValue'  + ',' +'TotalTime' + ',' + 'NumberOfCategories\n')
     
     all_runs = []
     for filename in glob.glob("./res/*.json"):
         with open(filename) as f:
             data = json.load(f)
             all_runs.append(data)
-            print (data['TestType'], data['UseShares'], data['NumberOfParties'], data['DatasetSize'],  data['PValue'], data['TotalTime'])
+            data_csv.write(str(data['TestType']) + ',' + str(data['UseShares']) + ',' + str(data['NumberOfParties']) + ',' + str(data['DatasetSize']) + ',' + str(data['PValue']) + ',' + str(data['TotalTime']) + ',' + str(data['NumberOfCategories']) + '\n')
             
     
     runtime_bar('CHI2', all_runs, True, True, show, (14, 4))    

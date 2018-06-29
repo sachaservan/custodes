@@ -1,14 +1,15 @@
 {
 	"TestType": "CHI2",
 	"UseShares": true,
-	"PValue": 2.5389262699434968e+64,
+	"PValue": 15.952000059187412,
 	"DatasetSize": 5000,
 	"NumberOfCategories": 20,
 	"NumberOfParties": 17,
-	"TotalNumberOfShares": 1589357,
-	"TotalTime": 1540.359718069,
-	"ComputationTime": 11.455282867,
+	"TotalNumberOfShares": 1589323,
+	"DealerSetupTime": 15.850334143,
+	"TotalTime": 1874.360389646,
+	"ComputationTime": 10.20460626,
 	"ComparisonTime": 0,
-	"DivisionTime": 1528.904435955,
-	"Latency": 0
+	"DivisionTime": 1864.155784304,
+	"Latency": 0.001
 }

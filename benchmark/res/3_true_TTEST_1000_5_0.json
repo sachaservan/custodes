@@ -1,14 +1,15 @@
 {
 	"TestType": "TTEST",
 	"UseShares": true,
-	"PValue": 2.934490791700991e+33,
+	"PValue": 0.19469008214028097,
 	"DatasetSize": 1000,
 	"NumberOfCategories": 0,
 	"NumberOfParties": 5,
 	"TotalNumberOfShares": 81020,
-	"TotalTime": 6.696805899,
-	"ComputationTime": 0.556633625,
+	"DealerSetupTime": 0.115138349,
+	"TotalTime": 20.859361483,
+	"ComputationTime": 2.706834263,
 	"ComparisonTime": 0,
-	"DivisionTime": 6.14017975,
-	"Latency": 0
+	"DivisionTime": 18.152534711,
+	"Latency": 0.001
 }

@@ -29,7 +29,7 @@ type Report struct {
 }
 
 func main() {
-	printWelcome()
+	//printWelcome()
 
 	// Command line arguments
 	rootDirCmd := flag.String("rootdir", "", "full path to project dir.")
@@ -50,8 +50,8 @@ func main() {
 	debug := *debugCmd
 	useShares := *useSharesCmd
 
-	fmt.Println("dummy " + rootDir + " " + strconv.FormatBool(useShares) + " " + strconv.Itoa(*runIdCmd))
-	fmt.Println("num parties " + strconv.Itoa(numParties))
+	//fmt.Println("dummy " + rootDir + " " + strconv.FormatBool(useShares) + " " + strconv.Itoa(*runIdCmd))
+	//fmt.Println("num parties " + strconv.Itoa(numParties))
 
 	if numParties < 2*threshold-1 {
 		panic("Threshold is too high compared to the number of parties!")
@@ -59,7 +59,7 @@ func main() {
 
 	runtime.GOMAXPROCS(2 * numParties)
 
-	fmt.Print("Generating keys...")
+	//fmt.Print("Generating keys...")
 	params := &hypocert.MPCKeyGenParams{
 		NumParties:      numParties,
 		Threshold:       threshold,
@@ -72,7 +72,7 @@ func main() {
 
 	mpc := hypocert.NewMPCKeyGen(params)
 
-	fmt.Println("done.")
+	//fmt.Println("done.")
 
 	filename1000 := rootDir + "/benchmark/benchmark_1000.csv"
 	filenameChiSq1000_5 := rootDir + "/benchmark/benchmark_chisq_1000_5.csv"
@@ -320,7 +320,7 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 	}
 }
 
-func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, zkp bool, debug bool) {
+func runMultBenchmark(mpc *hypocert.MPC, numParties int, latency time.Duration, zkp bool, debug bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -328,9 +328,9 @@ func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, z
 	//**************************************************************************************
 	//**************************************************************************************
 
-	fmt.Println("------------------------------------------------")
-	fmt.Println("Benchmarking Multiplication times...")
-	fmt.Println("------------------------------------------------")
+	//fmt.Println("------------------------------------------------")
+	//fmt.Println("Benchmarking Multiplication times...")
+	//fmt.Println("------------------------------------------------")
 
 	a := mpc.Pk.Encrypt(big.NewInt(1))
 	b := mpc.Pk.Encrypt(big.NewInt(1))
@@ -353,9 +353,13 @@ func runMultBenchmark(mpc *hypocert.MPC, threshold int, latency time.Duration, z
 		endTime := time.Now()
 		multTimeShares += endTime.Sub(stime)
 	}
-
-	fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0))
-	fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0))
+	fmt.Println(
+		strconv.Itoa(numParties) + ", " +
+			strconv.FormatFloat((float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0)), 'f', 6, 64) + ", " +
+			strconv.FormatFloat((float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0)), 'f', 6, 64) + ", " +
+			(latency).String())
+	//fmt.Printf("Paillier MULT time:   %f\n", +float64(multTimePaillier.Nanoseconds())/(1000000.0*1000.0))
+	//fmt.Printf("Shares MULT time:     %f\n", +float64(multTimeShares.Nanoseconds())/(1000000.0*1000.0))
 }
 
 func printWelcome() {
