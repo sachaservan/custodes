@@ -219,14 +219,15 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
 
 if __name__== "__main__":
     show = True
-    print ('TestType', 'UseShares', 'NumberOfParties', 'DatasetSize',  'PValue', 'TotalTime')
+    data_csv = open('data.csv', 'w')
+    data_csv.write('TestType' + ',' + 'UseShares' + ',' + 'NumberOfParties' + ',' + 'DatasetSize' + ',' +  'PValue'  + ',' +'TotalTime' + ',' + 'NumberOfCategories\n')
     
     all_runs = []
     for filename in glob.glob("./res/*.json"):
         with open(filename) as f:
             data = json.load(f)
             all_runs.append(data)
-            print (data['TestType'], data['UseShares'], data['NumberOfParties'], data['DatasetSize'],  data['PValue'], data['TotalTime'])
+            data_csv.write(str(data['TestType']) + ',' + str(data['UseShares']) + ',' + str(data['NumberOfParties']) + ',' + str(data['DatasetSize']) + ',' + str(data['PValue']) + ',' + str(data['TotalTime']) + ',' + str(data['NumberOfCategories']) + '\n')
             
     
     runtime_bar('CHI2', all_runs, True, True, show, (14, 4))    
