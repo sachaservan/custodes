@@ -49,8 +49,20 @@ def multiplication_line(show, size):
     
     f, (ax1) = plt.subplots(1, 1, sharey=False, figsize=size)
     df = pd.read_csv('multiplication_times.csv')
-    plt.plot(df["numparties"], df["shares"],color=flatui[0], marker='o', label='LSS MPC')
-    plt.plot(df["numparties"], df["paillier"],color=flatui[1],linestyle='--',  marker='o', label='Threshold-Paillier MPC')
+    
+    plt.plot(df[df.latency == 1]["numparties"], df[df.latency == 1]["shares"],color=flatui[0],  linestyle='-', marker='o', label='LSS MPC, 1ms')
+    plt.plot(df[df.latency == 1]["numparties"], df[df.latency == 1]["paillier"],color=flatui[1],linestyle='-', marker='s', label='Threshold-Paillier MPC, 1ms')
+    
+    plt.plot(df[df.latency == 50]["numparties"], df[df.latency == 50]["shares"],color=flatui[0],  linestyle='--', marker='o', label='LSS MPC, 50ms')
+    plt.plot(df[df.latency == 50]["numparties"], df[df.latency == 50]["paillier"],color=flatui[1],linestyle='--', marker='s', label='Threshold-Paillier MPC, 50ms')
+    
+
+    plt.plot(df[df.latency == 100]["numparties"], df[df.latency == 100]["shares"],color=flatui[0],  linestyle='-.', marker='o', label='LSS MPC, 50ms')
+    plt.plot(df[df.latency == 100]["numparties"], df[df.latency == 100]["paillier"],color=flatui[1],linestyle='-.', marker='s', label='Threshold-Paillier MPC, 100ms')
+
+
+    plt.plot(df[df.latency == 150]["numparties"], df[df.latency == 150]["shares"],color=flatui[0],  linestyle=':', marker='o', label='LSS MPC, 50ms')
+    plt.plot(df[df.latency == 150]["numparties"], df[df.latency == 150]["paillier"],color=flatui[1],linestyle=':', marker='s', label='Threshold-Paillier MPC, 150ms')
     
     ax1.legend()
         
