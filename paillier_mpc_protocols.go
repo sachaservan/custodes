@@ -35,7 +35,8 @@ func (mpc *MPC) ERandomMultShare(c *paillier.Ciphertext) (*paillier.Ciphertext, 
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			r, mult := mpc.Parties[i].GetRandomMultEnc(c)
+			cpy := &paillier.Ciphertext{C: big.NewInt(0).Set(c.C)}
+			r, mult := mpc.Parties[i].GetRandomMultEnc(cpy)
 			randomValues[i] = r
 			partialMult[i] = mult
 		}(i)

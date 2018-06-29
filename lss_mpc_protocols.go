@@ -323,8 +323,8 @@ func NewMPCKeyGen(params *MPCKeyGenParams) *MPC {
 		panic("modulus not big enough for given parameters")
 	}
 
-	shareModulusBits := 4*params.MessageBits + params.FPPrecisionBits + params.SecurityBits + nu + 1
-	secretSharePrime, err := rand.Prime(rand.Reader, shareModulusBits)
+	//shareModulusBits := 4*params.MessageBits + params.FPPrecisionBits + params.SecurityBits + nu + 1
+	secretSharePrime, err := rand.Prime(rand.Reader, 1024)
 
 	tkh := paillier.GetThresholdKeyGenerator(params.KeyBits, params.NumParties, params.Threshold, rand.Reader)
 	tpks, err := tkh.Generate()
