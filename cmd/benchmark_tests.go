@@ -142,7 +142,7 @@ func exampleChiSquaredSimulation(mpc *hypocert.MPC, filepath string, debug bool)
 		chi2 = mpc.Add(chi2, xi[i])
 	}
 
-	chi2 = mpc.TruncPR(chi2, mpc.K, mpc.FPPrecBits)
+	chi2 = mpc.TruncPR(chi2, 2*mpc.K, mpc.FPPrecBits)
 	chi2Stat := mpc.RevealShareFP(chi2, mpc.FPPrecBits)
 	endTime := time.Now()
 
@@ -256,9 +256,9 @@ func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug boo
 	}
 
 	// adjust the prec after mult
-	sumXY = mpc.ETruncPR(sumXY, mpc.K, mpc.FPPrecBits)
-	sumDevX2 = mpc.ETruncPR(sumDevX2, mpc.K, mpc.FPPrecBits)
-	sumDevY2 = mpc.ETruncPR(sumDevY2, mpc.K, mpc.FPPrecBits)
+	sumXY = mpc.ETruncPR(sumXY, 2*mpc.K, mpc.FPPrecBits)
+	sumDevX2 = mpc.ETruncPR(sumDevX2, 2*mpc.K, mpc.FPPrecBits)
+	sumDevY2 = mpc.ETruncPR(sumDevY2, 2*mpc.K, mpc.FPPrecBits)
 
 	// compute the numerator = [sum for all i (x_i - mean_x)(y_i - mean_y)]
 	numerator := sumXY
@@ -297,7 +297,7 @@ func examplePearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug boo
 
 	// square the numerator
 	numeratorShare = mpc.Mult(numeratorShare, numeratorShare)
-	numeratorShare = mpc.TruncPR(numeratorShare, mpc.K, mpc.FPPrecBits)
+	numeratorShare = mpc.TruncPR(numeratorShare, 2*mpc.K, mpc.FPPrecBits)
 
 	res := mpc.FPDivision(numeratorShare, denominatorShare)
 
@@ -392,9 +392,9 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 	}
 
 	meanX := mpc.ECMult(sumX, mpc.Pk.EncodeFixedPoint(invNumRows, mpc.FPPrecBits))
-	meanX = mpc.ETruncPR(meanX, mpc.K, mpc.FPPrecBits)
+	meanX = mpc.ETruncPR(meanX, 2*mpc.K, mpc.FPPrecBits)
 	meanY := mpc.ECMult(sumY, mpc.Pk.EncodeFixedPoint(invNumRows, mpc.FPPrecBits))
-	meanY = mpc.ETruncPR(meanY, mpc.K, mpc.FPPrecBits)
+	meanY = mpc.ETruncPR(meanY, 2*mpc.K, mpc.FPPrecBits)
 
 	if debug {
 		// sanity check
@@ -426,8 +426,8 @@ func exampleTTestSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*bi
 		sdY = mpc.Pk.EAdd(sdY, sumsSdY[i])
 	}
 
-	sdX = mpc.ETruncPR(sdX, mpc.K, mpc.FPPrecBits)
-	sdY = mpc.ETruncPR(sdY, mpc.K, mpc.FPPrecBits)
+	sdX = mpc.ETruncPR(sdX, 2*mpc.K, mpc.FPPrecBits)
+	sdY = mpc.ETruncPR(sdY, 2*mpc.K, mpc.FPPrecBits)
 	sdX = mpc.ECMultFP(sdX, big.NewFloat(1.0/float64(numRows-1)))
 	sdY = mpc.ECMultFP(sdY, big.NewFloat(1.0/float64(numRows-1)))
 
@@ -557,7 +557,7 @@ func exampleChiSquaredSimulationWithSecretSharing(mpc *hypocert.MPC, filepath st
 		go func(i int) {
 			defer wg.Done()
 			expected := mpc.MultC(sumTotal, mpc.EncodeFixedPoint(expectedPercentage[i], mpc.FPPrecBits))
-			expectedValues[i] = mpc.TruncPR(expected, mpc.K, mpc.FPPrecBits)
+			expectedValues[i] = mpc.TruncPR(expected, 2*mpc.K, mpc.FPPrecBits)
 		}(i)
 	}
 	wg.Wait()
@@ -592,7 +592,7 @@ func exampleChiSquaredSimulationWithSecretSharing(mpc *hypocert.MPC, filepath st
 		chi2 = mpc.Add(chi2, xi[i])
 	}
 
-	chi2 = mpc.TruncPR(chi2, mpc.K, mpc.FPPrecBits)
+	chi2 = mpc.TruncPR(chi2, 2*mpc.K, mpc.FPPrecBits)
 	chi2Stat := mpc.RevealShareFP(chi2, mpc.FPPrecBits)
 
 	endTime := time.Now()
@@ -671,11 +671,10 @@ func exampleTTestSimulationWithSecretSharing(mpc *hypocert.MPC, filepath string,
 		sumX = mpc.Add(sumX, eX[i])
 		sumY = mpc.Add(sumY, eY[i])
 	}
-
 	meanX := mpc.MultC(sumX, invNumRows)
-	meanX = mpc.TruncPR(meanX, mpc.K, mpc.FPPrecBits)
+	meanX = mpc.TruncPR(meanX, 2*mpc.K, mpc.FPPrecBits)
 	meanY := mpc.MultC(sumY, invNumRows)
-	meanY = mpc.TruncPR(meanY, mpc.K, mpc.FPPrecBits)
+	meanY = mpc.TruncPR(meanY, 2*mpc.K, mpc.FPPrecBits)
 
 	if debug {
 		// sanity check
@@ -708,16 +707,16 @@ func exampleTTestSimulationWithSecretSharing(mpc *hypocert.MPC, filepath string,
 		sdY = mpc.Add(sdY, sumsSdY[i])
 	}
 
-	sdX = mpc.TruncPR(sdX, mpc.K, mpc.FPPrecBits)
-	sdY = mpc.TruncPR(sdY, mpc.K, mpc.FPPrecBits)
+	sdX = mpc.TruncPR(sdX, 2*mpc.K, mpc.FPPrecBits)
+	sdY = mpc.TruncPR(sdY, 2*mpc.K, mpc.FPPrecBits)
 	sdX = mpc.MultC(sdX, mpc.EncodeFixedPoint(big.NewFloat(1.0/float64(numRows-1)), mpc.FPPrecBits))
-	sdX = mpc.TruncPR(sdX, mpc.K, mpc.FPPrecBits)
+	sdX = mpc.TruncPR(sdX, 2*mpc.K, mpc.FPPrecBits)
 	sdY = mpc.MultC(sdY, mpc.EncodeFixedPoint(big.NewFloat(1.0/float64(numRows-1)), mpc.FPPrecBits))
-	sdY = mpc.TruncPR(sdY, mpc.K, mpc.FPPrecBits)
+	sdY = mpc.TruncPR(sdY, 2*mpc.K, mpc.FPPrecBits)
 
 	numerator := mpc.Sub(meanX, meanY)
 	numerator = mpc.Mult(numerator, numerator)
-	numerator = mpc.TruncPR(numerator, mpc.K, mpc.FPPrecBits)
+	numerator = mpc.TruncPR(numerator, 2*mpc.K, mpc.FPPrecBits)
 
 	tx := mpc.Sub(mpc.MultC(sdX, big.NewInt(int64(numRows))), sdX)
 	ty := mpc.Sub(mpc.MultC(sdY, big.NewInt(int64(numRows))), sdY)
@@ -726,7 +725,7 @@ func exampleTTestSimulationWithSecretSharing(mpc *hypocert.MPC, filepath string,
 
 	df := 1.0 / float64(numRows*numRows-numRows)
 	denominator = mpc.MultC(denominator, mpc.EncodeFixedPoint(big.NewFloat(df), mpc.FPPrecBits))
-	denominator = mpc.TruncPR(denominator, mpc.K, mpc.FPPrecBits)
+	denominator = mpc.TruncPR(denominator, 2*mpc.K, mpc.FPPrecBits)
 
 	if debug {
 		// sanity check
@@ -819,9 +818,9 @@ func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath s
 	}
 
 	meanX := mpc.MultC(sumX, invNumRows)
-	meanX = mpc.TruncPR(meanX, mpc.K, mpc.FPPrecBits)
+	meanX = mpc.TruncPR(meanX, 2*mpc.K, mpc.FPPrecBits)
 	meanY := mpc.MultC(sumY, invNumRows)
-	meanY = mpc.TruncPR(meanY, mpc.K, mpc.FPPrecBits)
+	meanY = mpc.TruncPR(meanY, 2*mpc.K, mpc.FPPrecBits)
 
 	if debug {
 		// sanity check
@@ -865,15 +864,15 @@ func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath s
 	}
 
 	// adjust the prec after mult
-	sumXY = mpc.TruncPR(sumXY, mpc.K, mpc.FPPrecBits)
-	sumDevX2 = mpc.TruncPR(sumDevX2, mpc.K, mpc.FPPrecBits)
-	sumDevY2 = mpc.TruncPR(sumDevY2, mpc.K, mpc.FPPrecBits)
+	sumXY = mpc.TruncPR(sumXY, 2*mpc.K, mpc.FPPrecBits)
+	sumDevX2 = mpc.TruncPR(sumDevX2, 2*mpc.K, mpc.FPPrecBits)
+	sumDevY2 = mpc.TruncPR(sumDevY2, 2*mpc.K, mpc.FPPrecBits)
 
 	// compute the numerator = [sum for all i (x_i - mean_x)(y_i - mean_y)]
 	numerator := sumXY
 
 	denominator := mpc.Mult(sumDevX2, sumDevY2)
-	denominator = mpc.TruncPR(denominator, mpc.K, mpc.FPPrecBits)
+	denominator = mpc.TruncPR(denominator, 2*mpc.K, mpc.FPPrecBits)
 
 	if debug {
 		// sanity check
@@ -899,7 +898,7 @@ func examplePearsonsTestSimulationWihSecretSharing(mpc *hypocert.MPC, filepath s
 
 	// square the numerator
 	numerator = mpc.Mult(numerator, numerator)
-	numerator = mpc.TruncPR(numerator, mpc.K, mpc.FPPrecBits)
+	numerator = mpc.TruncPR(numerator, 2*mpc.K, mpc.FPPrecBits)
 
 	// done with computations
 	endTimeComp := time.Now()
