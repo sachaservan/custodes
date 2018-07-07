@@ -1,5 +1,15 @@
 # HypoCert
-## A system for secure multi-party hypothesis testing using Paillier. 
+## A system for certifying hypothesis testing procedures. See hypocert.pdf for more details. 
+
+#### Implementation
+
+To run a simulation of the system:  
+```
+cd go/src/hypocert/cmd
+go get
+make
+./hypocert -parties <num_parties> -threshold <corruption-threhsold> -rootdir <path-to-project> -netlat <network-latency-ms> -lss
+```
 
 # License
 
