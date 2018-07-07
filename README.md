@@ -1,5 +1,6 @@
 # HypoCert
-## A system for certifying hypothesis testing procedures. See hypocert.pdf for more details. 
+## A system for certifying hypothesis testing procedures. 
+See hypocert.pdf for more details. 
 
 #### Implementation
 
@@ -8,7 +9,7 @@ To run a simulation of the system:
 cd go/src/hypocert/cmd
 go get
 make
-./hypocert -parties <num_parties> -threshold <corruption-threhsold> -rootdir <path-to-project> -netlat <network-latency-ms> -lss
+./hypocert -parties <num_parties> -threshold <corruption-threhsold> -rootdir <path-to-project> -lss
 ```
 
 # License
