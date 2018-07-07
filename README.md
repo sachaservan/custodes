@@ -1,6 +1,6 @@
 # HypoCert
 ## A system for certifying hypothesis testing procedures. 
-See hypocert.pdf for more details. 
+See [https://github.com/sachaservan/hypocert/blob/master/hypocert.pdf](https://www.google.com) for more details. 
 
 #### Implementation
 
