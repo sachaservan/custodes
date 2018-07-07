@@ -12,7 +12,6 @@ import (
 var funcEXORCoefficientCache sync.Map
 
 // Paillier MPC functions
-
 func (mpc *MPC) EMult(a, b *paillier.Ciphertext) *paillier.Ciphertext {
 	mask, val := mpc.ERandomMultShare(a)
 	c := mpc.Pk.EAdd(b, mask)
