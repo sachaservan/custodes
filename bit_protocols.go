@@ -13,7 +13,7 @@ import (
 // set/propagate/kill wrapper used in the
 // BitsCarries protocol
 type spk struct {
-	s, p, k *node.Share
+	s, p, k *party.Share
 }
 
 type BooleanFunction int
@@ -24,9 +24,9 @@ const (
 )
 
 // RandomBits returns a random bit vector from {0,1}^l
-func (mpc *MPC) RandomBits(m int) []*node.Share {
+func (mpc *MPC) RandomBits(m int) []*party.Share {
 
-	bits := make([]*node.Share, m)
+	bits := make([]*party.Share, m)
 	twoInv := big.NewInt(0).ModInverse(big.NewInt(2), mpc.P)
 	one := mpc.CreateShares(big.NewInt(1))
 
@@ -52,11 +52,11 @@ func (mpc *MPC) RandomBits(m int) []*node.Share {
 }
 
 // RandomShare returns a shared random value between 0...n*bound
-func (mpc *MPC) RandomShare(bound *big.Int) *node.Share {
+func (mpc *MPC) RandomShare(bound *big.Int) *party.Share {
 
-	id := node.NewShareID()
+	id := party.NewShareID()
 
-	var r *node.Share
+	var r *party.Share
 	for i := 0; i < len(mpc.Parties); i++ {
 		r = mpc.Parties[i].CreateRandomShare(bound, id)
 	}
@@ -66,7 +66,7 @@ func (mpc *MPC) RandomShare(bound *big.Int) *node.Share {
 
 // RandomInvertibleShare returns a random encrypted integer
 // in {1...P} and its inverse (mod P)
-func (mpc *MPC) RandomInvertibleShare() (*node.Share, *node.Share, error) {
+func (mpc *MPC) RandomInvertibleShare() (*party.Share, *party.Share, error) {
 
 	a := mpc.RandomShare(mpc.P)
 	b := mpc.RandomShare(mpc.P)
@@ -84,7 +84,7 @@ func (mpc *MPC) RandomInvertibleShare() (*node.Share, *node.Share, error) {
 }
 
 // SolvedBits returns a random bit string from {0,1}^m and the corresponding
-func (mpc *MPC) SolvedBits(m int) ([]*node.Share, *node.Share, error) {
+func (mpc *MPC) SolvedBits(m int) ([]*party.Share, *party.Share, error) {
 
 	bits := mpc.RandomBits(m)
 
@@ -95,7 +95,7 @@ func (mpc *MPC) SolvedBits(m int) ([]*node.Share, *node.Share, error) {
 }
 
 // BitsExp returns 2^x where x = integer(bits)
-func (mpc *MPC) BitsExp(bits []*node.Share) *node.Share {
+func (mpc *MPC) BitsExp(bits []*party.Share) *party.Share {
 
 	base := big.NewInt(2)
 	one := mpc.CreateShares(big.NewInt(1))
@@ -114,13 +114,13 @@ func (mpc *MPC) BitsExp(bits []*node.Share) *node.Share {
 }
 
 //BitsMult returns the bitwise sharing of a*b (note: a*b < pk.T)
-func (mpc *MPC) BitsMult(a, b []*node.Share) []*node.Share {
+func (mpc *MPC) BitsMult(a, b []*party.Share) []*party.Share {
 
 	length := len(a) + 1
 	l2 := int(math.Floor(float64(length) / 2.0))
 
-	resBits := make([]*node.Share, length)
-	partialSum := make([]*node.Share, length)
+	resBits := make([]*party.Share, length)
+	partialSum := make([]*party.Share, length)
 
 	zero := mpc.CreateShares(big.NewInt(0))
 	for i := 0; i < length; i++ {
@@ -147,7 +147,7 @@ func (mpc *MPC) BitsMult(a, b []*node.Share) []*node.Share {
 }
 
 //BitsToEInteger returns the integer (in Zn) representation of an encrypted binary string
-func (mpc *MPC) BitsToEInteger(bits []*node.Share) *node.Share {
+func (mpc *MPC) BitsToEInteger(bits []*party.Share) *party.Share {
 
 	acc := mpc.CreateShares(big.NewInt(0))
 	base := big.NewInt(2)
@@ -160,7 +160,7 @@ func (mpc *MPC) BitsToEInteger(bits []*node.Share) *node.Share {
 }
 
 //BitsDec returns a bit representation of an integer in {0...T}
-func (mpc *MPC) BitsDec(a *node.Share, m int) []*node.Share {
+func (mpc *MPC) BitsDec(a *party.Share, m int) []*party.Share {
 
 	// get solved bits
 	solvedBits, d, err := mpc.SolvedBits(m)
@@ -191,18 +191,18 @@ func (mpc *MPC) BitsDec(a *node.Share, m int) []*node.Share {
 
 // FanInMULT efficiently computes [x,x^2,x^3...x^n] where n = len(elements)
 // Note: can be used as a PrefixAND when elements are binary
-func (mpc *MPC) FanInMULT(elements []*node.Share) []*node.Share {
+func (mpc *MPC) FanInMULT(elements []*party.Share) []*party.Share {
 
 	n := len(elements)
-	res := make([]*node.Share, n)
+	res := make([]*party.Share, n)
 	res[0] = elements[0]
 
 	if n == 1 {
 		return res
 	}
 
-	shares := make([]*node.Share, n)
-	sharesInv := make([]*node.Share, n)
+	shares := make([]*party.Share, n)
+	sharesInv := make([]*party.Share, n)
 
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
@@ -220,7 +220,7 @@ func (mpc *MPC) FanInMULT(elements []*node.Share) []*node.Share {
 
 	wg.Wait()
 
-	d := make([]*node.Share, n)
+	d := make([]*party.Share, n)
 	d[0] = shares[0]
 	for i := 1; i < n; i++ {
 		wg.Add(1)
@@ -252,7 +252,7 @@ func (mpc *MPC) FanInMULT(elements []*node.Share) []*node.Share {
 	return res
 }
 
-func (mpc *MPC) BitsPrefixOR(bits []*node.Share) []*node.Share {
+func (mpc *MPC) BitsPrefixOR(bits []*party.Share) []*party.Share {
 
 	degree := len(bits)
 
@@ -267,15 +267,15 @@ func (mpc *MPC) BitsPrefixOR(bits []*node.Share) []*node.Share {
 
 	var wg sync.WaitGroup
 	// Compute Row wise OR of elements in A
-	rowOr := make([]*node.Share, lambda)
+	rowOr := make([]*party.Share, lambda)
 	for i := 0; i < lambda; i++ {
 		wg.Add(1)
-		row := make([]*node.Share, lambda)
+		row := make([]*party.Share, lambda)
 		for j := 0; j < lambda; j++ {
 			row[j] = bits[i*lambda+j]
 		}
 
-		go func(i int, row []*node.Share) {
+		go func(i int, row []*party.Share) {
 			defer wg.Done()
 
 			res := mpc.BitsOR(row)
@@ -287,18 +287,18 @@ func (mpc *MPC) BitsPrefixOR(bits []*node.Share) []*node.Share {
 	wg.Wait()
 
 	// Compute ORs of Xis
-	rowRes := make([]*node.Share, lambda)
+	rowRes := make([]*party.Share, lambda)
 	rowRes[0] = rowOr[0]
 
 	wg.Add(lambda - 1)
 	for n := 1; n < lambda; n++ {
 
-		row := make([]*node.Share, n+1)
+		row := make([]*party.Share, n+1)
 		for i := 0; i <= n; i++ {
 			row[i] = rowOr[i]
 		}
 
-		go func(n int, row []*node.Share) {
+		go func(n int, row []*party.Share) {
 			defer wg.Done()
 
 			res := mpc.BitsOR(row)
@@ -309,13 +309,13 @@ func (mpc *MPC) BitsPrefixOR(bits []*node.Share) []*node.Share {
 
 	wg.Wait()
 
-	f := make([]*node.Share, lambda)
+	f := make([]*party.Share, lambda)
 	f[0] = rowOr[0]
 	for i := 1; i < lambda; i++ {
 		f[i] = mpc.Sub(rowRes[i], rowRes[i-1])
 	}
 
-	g := make([]*node.Share, lambda)
+	g := make([]*party.Share, lambda)
 	for j := 0; j < lambda; j++ {
 		sum := zero
 		for i := 0; i < lambda; i++ {
@@ -325,18 +325,18 @@ func (mpc *MPC) BitsPrefixOR(bits []*node.Share) []*node.Share {
 	}
 
 	// Compute PrefixOr of ci
-	b := make([]*node.Share, lambda)
+	b := make([]*party.Share, lambda)
 	b[0] = g[0]
 
 	wg.Add(lambda - 1)
 	for n := 1; n < lambda; n++ {
 
-		row := make([]*node.Share, n+1)
+		row := make([]*party.Share, n+1)
 		for i := 0; i <= n; i++ {
 			row[i] = g[i]
 		}
 
-		go func(n int, row []*node.Share) {
+		go func(n int, row []*party.Share) {
 			defer wg.Done()
 
 			res := mpc.BitsOR(row)
@@ -347,12 +347,12 @@ func (mpc *MPC) BitsPrefixOR(bits []*node.Share) []*node.Share {
 
 	wg.Wait()
 
-	s := make([]*node.Share, lambda)
+	s := make([]*party.Share, lambda)
 	for i := 0; i < lambda; i++ {
 		s[i] = mpc.Sub(rowRes[i], f[i])
 	}
 
-	result := make([]*node.Share, lambda*lambda)
+	result := make([]*party.Share, lambda*lambda)
 	for i := 0; i < lambda; i++ {
 		for j := 0; j < lambda; j++ {
 
@@ -401,7 +401,7 @@ func (mpc *MPC) BitsPrefixSPK(bits []*spk) []*spk {
 }
 
 // BitsADD outputs the bitwise representation of a+b
-func (mpc *MPC) BitsADD(a, b []*node.Share) []*node.Share {
+func (mpc *MPC) BitsADD(a, b []*party.Share) []*party.Share {
 
 	if len(a) < len(b) {
 		a = mpc.makeEqualLength(a, b)
@@ -412,7 +412,7 @@ func (mpc *MPC) BitsADD(a, b []*node.Share) []*node.Share {
 	degree := len(a)
 	carries := mpc.BitsCarries(a, b)
 
-	sum := make([]*node.Share, degree+1)
+	sum := make([]*party.Share, degree+1)
 	lsb := mpc.Add(a[0], b[0])
 	lsb = mpc.Sub(lsb, mpc.MultC(carries[0], big.NewInt(2)))
 	sum[0] = lsb
@@ -428,7 +428,7 @@ func (mpc *MPC) BitsADD(a, b []*node.Share) []*node.Share {
 }
 
 // BitsLT returns [0] if a > b, [1] otherwise
-func (mpc *MPC) BitsLT(a, b []*node.Share) *node.Share {
+func (mpc *MPC) BitsLT(a, b []*party.Share) *party.Share {
 
 	if len(a) < len(b) {
 		a = mpc.makeEqualLength(a, b)
@@ -437,7 +437,7 @@ func (mpc *MPC) BitsLT(a, b []*node.Share) *node.Share {
 	}
 
 	degree := len(a) // len(a) = len(b) now
-	e := make([]*node.Share, degree)
+	e := make([]*party.Share, degree)
 
 	var wg sync.WaitGroup
 
@@ -455,7 +455,7 @@ func (mpc *MPC) BitsLT(a, b []*node.Share) *node.Share {
 
 	f := mpc.BitsPrefixOR(e)
 
-	g := make([]*node.Share, degree)
+	g := make([]*party.Share, degree)
 	g[0] = f[0]
 	for i := degree - 1; i > 0; i-- {
 		g[i] = mpc.Sub(f[i], f[i-1])
@@ -463,7 +463,7 @@ func (mpc *MPC) BitsLT(a, b []*node.Share) *node.Share {
 
 	wg.Wait()
 
-	h := make([]*node.Share, degree)
+	h := make([]*party.Share, degree)
 	for i := 0; i < degree; i++ {
 		wg.Add(1)
 		go func(i int) {
@@ -483,14 +483,14 @@ func (mpc *MPC) BitsLT(a, b []*node.Share) *node.Share {
 	return res
 }
 
-func (mpc *MPC) BitsCarries(a, b []*node.Share) []*node.Share {
+func (mpc *MPC) BitsCarries(a, b []*party.Share) []*party.Share {
 
 	one := mpc.CreateShares(big.NewInt(1))
 	degree := len(a) // len(a) = len(b) now
 
-	s := make([]*node.Share, degree)
-	p := make([]*node.Share, degree)
-	k := make([]*node.Share, degree)
+	s := make([]*party.Share, degree)
+	p := make([]*party.Share, degree)
+	k := make([]*party.Share, degree)
 	spks := make([]*spk, degree)
 
 	for i := 0; i < degree; i++ {
@@ -512,7 +512,7 @@ func (mpc *MPC) BitsCarries(a, b []*node.Share) []*node.Share {
 
 	f := mpc.BitsPrefixSPK(spks)
 
-	res := make([]*node.Share, degree)
+	res := make([]*party.Share, degree)
 
 	for i := 0; i < degree; i++ {
 		res[i] = f[i].s
@@ -532,14 +532,14 @@ func (mpc *MPC) BitsSPK(tups []*spk) *spk {
 		b = mpc.Mult(b, tups[i].p) // equiv to AND operation
 	}
 
-	allPs := make([]*node.Share, size)
+	allPs := make([]*party.Share, size)
 	for i := 0; i < size; i++ {
 		allPs[i] = mpc.CopyShare(tups[size-i-1].p)
 	}
 
 	preAnd := mpc.ReverseBits(mpc.FanInMULT(allPs))
 
-	carries := make([]*node.Share, size)
+	carries := make([]*party.Share, size)
 	carries[size-1] = tups[size-1].k
 
 	var wg sync.WaitGroup
@@ -568,10 +568,10 @@ func (mpc *MPC) BitsSPK(tups []*spk) *spk {
 	return &spk{s: a, p: b, k: sum}
 }
 
-func (mpc *MPC) ReverseBits(bits []*node.Share) []*node.Share {
+func (mpc *MPC) ReverseBits(bits []*party.Share) []*party.Share {
 
 	size := len(bits)
-	bitsR := make([]*node.Share, size)
+	bitsR := make([]*party.Share, size)
 	for i := 0; i < size; i++ {
 		bitsR[size-i-1] = bits[i]
 	}
@@ -580,10 +580,10 @@ func (mpc *MPC) ReverseBits(bits []*node.Share) []*node.Share {
 }
 
 // BitsBigEndian returns the n-bit (encrypted) representation of an integer a
-func (mpc *MPC) BitsBigEndian(a *big.Int, n int) []*node.Share {
+func (mpc *MPC) BitsBigEndian(a *big.Int, n int) []*party.Share {
 
 	s := fmt.Sprintf("%b", a)
-	bits := make([]*node.Share, len(s))
+	bits := make([]*party.Share, len(s))
 	k := 0
 	for i := len(s) - 1; i >= 0; i-- {
 		bits[k] = mpc.CreateShares(big.NewInt(int64(s[i] - '0')))
@@ -599,10 +599,10 @@ func (mpc *MPC) BitsBigEndian(a *big.Int, n int) []*node.Share {
 }
 
 // BitsZero returns the n-bit vector of zeros
-func (mpc *MPC) BitsZero() []*node.Share {
+func (mpc *MPC) BitsZero() []*party.Share {
 
 	n := mpc.K
-	bits := make([]*node.Share, n)
+	bits := make([]*party.Share, n)
 	zero := mpc.CreateShares(big.NewInt(0))
 
 	for i := 0; i < n; i++ {
@@ -612,7 +612,7 @@ func (mpc *MPC) BitsZero() []*node.Share {
 	return bits
 }
 
-func (mpc *MPC) symmetricBooleanFunction(bits []*node.Share, f BooleanFunction) *node.Share {
+func (mpc *MPC) symmetricBooleanFunction(bits []*party.Share, f BooleanFunction) *party.Share {
 
 	n := len(bits)
 
@@ -622,7 +622,7 @@ func (mpc *MPC) symmetricBooleanFunction(bits []*node.Share, f BooleanFunction) 
 		sum = s
 	}
 
-	a := make([]*node.Share, n+1)
+	a := make([]*party.Share, n+1)
 	for i := 0; i <= n; i++ {
 		a[i] = sum
 	}
@@ -646,17 +646,17 @@ func (mpc *MPC) symmetricBooleanFunction(bits []*node.Share, f BooleanFunction) 
 }
 
 // BitsXOR computes the XOR of all the bits
-func (mpc *MPC) BitsXOR(bits []*node.Share) *node.Share {
+func (mpc *MPC) BitsXOR(bits []*party.Share) *party.Share {
 	return mpc.symmetricBooleanFunction(bits, BooleanXOR)
 }
 
 // BitsOR computes the OR of all the bits
-func (mpc *MPC) BitsOR(bits []*node.Share) *node.Share {
+func (mpc *MPC) BitsOR(bits []*party.Share) *party.Share {
 	return mpc.symmetricBooleanFunction(bits, BooleanOR)
 }
 
 // BitsAND computes the AND of all the bits
-func (mpc *MPC) BitsAND(bits []*node.Share) *node.Share {
+func (mpc *MPC) BitsAND(bits []*party.Share) *party.Share {
 
 	degree := len(bits)
 
@@ -668,10 +668,10 @@ func (mpc *MPC) BitsAND(bits []*node.Share) *node.Share {
 	return res
 }
 
-func (mpc *MPC) makeEqualLength(a, b []*node.Share) []*node.Share {
+func (mpc *MPC) makeEqualLength(a, b []*party.Share) []*party.Share {
 	zero := mpc.CreateShares(big.NewInt(0))
 	delta := len(b) - len(a)
-	zeroArray := make([]*node.Share, delta)
+	zeroArray := make([]*party.Share, delta)
 	for i := 0; i < delta; i++ {
 		zeroArray[i] = zero
 	}

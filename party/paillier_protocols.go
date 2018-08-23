@@ -1,4 +1,4 @@
-package node
+package party
 
 import (
 	"math/big"
@@ -9,7 +9,7 @@ import (
 
 func (party *Party) GetRandomMultEnc(c *paillier.Ciphertext) (*paillier.Ciphertext, *paillier.Ciphertext) {
 	time.Sleep(party.NetworkLatency)
-	r := paillier.CryptoRandom(party.Pk.N)
+	r := CryptoRandom(party.Pk.N)
 	enc := party.Pk.Encrypt(r)
 	cMult := party.Pk.ECMult(c, r)
 
@@ -17,7 +17,7 @@ func (party *Party) GetRandomMultEnc(c *paillier.Ciphertext) (*paillier.Cipherte
 }
 
 func (party *Party) GetRandomEncAndShare(id int, bound *big.Int) (*paillier.Ciphertext, *Share) {
-	r := paillier.CryptoRandom(bound)
+	r := CryptoRandom(bound)
 	enc := party.Pk.Encrypt(r)
 	shares, values, _ := party.CreateShares(r, id)
 	party.DistributeRandShares(shares, values)
@@ -28,7 +28,7 @@ func (party *Party) GetRandomEncAndShare(id int, bound *big.Int) (*paillier.Ciph
 func (party *Party) GetRandomEncBitVector(m int) []*paillier.Ciphertext {
 	vec := make([]*paillier.Ciphertext, m)
 	for i := 0; i < m; i++ {
-		bit := paillier.CryptoRandom(big.NewInt(2))
+		bit := CryptoRandom(big.NewInt(2))
 		vec[i] = party.Pk.Encrypt(bit)
 	}
 
@@ -36,7 +36,7 @@ func (party *Party) GetRandomEncBitVector(m int) []*paillier.Ciphertext {
 }
 
 func (party *Party) GetRandomEnc(bound *big.Int) *paillier.Ciphertext {
-	r := paillier.CryptoRandom(bound)
+	r := CryptoRandom(bound)
 	enc := party.Pk.Encrypt(r)
 	return enc
 }

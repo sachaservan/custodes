@@ -1,4 +1,4 @@
-package node
+package party
 
 import (
 	"crypto/rand"
@@ -193,7 +193,7 @@ func (party *Party) CreateShares(s *big.Int, id int) ([]*Share, []*big.Int, int)
 	coeffs[0].Set(s)
 
 	for i := 1; i < party.Threshold; i++ {
-		coeffs[i] = paillier.CryptoRandom(party.P)
+		coeffs[i] = CryptoRandom(party.P)
 	}
 
 	var wg sync.WaitGroup
