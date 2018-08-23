@@ -13,12 +13,16 @@ func main() {
 	printWelcome()
 
 	// Command line arguments
-	rootDirCmd := flag.String("rootdir", "", "full path to project dir.")
+	example := flag.Bool("example", false, "run an examples of all three statistical tests.")
+	rootDirCmd := flag.String("rootdir", "", "full path to project dir where datasets are located.")
 	numPartiesCmd := flag.Int("parties", 3, "integer number of parties >= 3.")
-	thresholdCmd := flag.Int("threshold", 2, "integer number of parties >= 2.")
+	thresholdCmd := flag.Int("threshold", 2, "integer number of threshold >= 2.")
 	networkLatencyCmd := flag.Int("netlat", 0, "average network latency for party communication.")
-	debugCmd := flag.Bool("debug", false, "print debug statements during computation.")
-	useSharesCmd := flag.Bool("lss", false, "use only linear secret sharing for computations.")
+	debug := flag.Bool("debug", false, "print debug statements during computation.")
+	sharesOnly := flag.Bool("shares", false, "use only linear secret sharing for ALL computations.")
+	ttest := flag.Bool("ttest", false, "run Student's T-test simulation")
+	corrtest := flag.Bool("pearsontest", false, "run Pearson's Correlation test simulation")
+	chisqtest := flag.Bool("chisqtest", false, "run Chi^2 test simulation")
 
 	flag.Parse()
 
@@ -27,10 +31,9 @@ func main() {
 	numParties := *numPartiesCmd
 	threshold := *thresholdCmd
 	networkLatency := time.Duration(*networkLatencyCmd)
-	debug := *debugCmd
-	useShares := *useSharesCmd
+	allTests := !(*ttest || *corrtest || *chisqtest)
 
-	// ensure threshsold is ok
+	// ensure threshsold is ok for the given number of parties
 	if numParties < 2*threshold-1 {
 		panic("Threshold is too high compared to the number of parties!")
 	}
@@ -39,18 +42,33 @@ func main() {
 	runtime.GOMAXPROCS(2 * numParties)
 
 	// system parameters
-	params := &hypocert.MPCKeyGenParams{
-		NumParties:      numParties,
-		Threshold:       threshold,
-		Verify:          false,
-		KeyBits:         512,
-		MessageBits:     100,
-		SecurityBits:    40,
-		FPPrecisionBits: 50,
-		NetworkLatency:  networkLatency * time.Millisecond}
+	var params *hypocert.MPCKeyGenParams
+
+	if !*example {
+		params = &hypocert.MPCKeyGenParams{
+			NumParties:      numParties,
+			Threshold:       threshold,
+			KeyBits:         128,
+			MessageBits:     100,
+			SecurityBits:    40,
+			FPPrecisionBits: 30,
+			NetworkLatency:  networkLatency * time.Millisecond}
+	} else {
+		params = &hypocert.MPCKeyGenParams{
+			NumParties:      3,
+			Threshold:       2,
+			KeyBits:         512,
+			MessageBits:     100,
+			SecurityBits:    0,
+			FPPrecisionBits: 20,
+			NetworkLatency:  0}
+	}
 
 	fmt.Print("System setup in progress...")
-	mpc := hypocert.NewMPCKeyGen(params)
+	mpc, err := hypocert.NewMPCKeyGen(params)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println("done.")
 
 	// filenames to use for the statistical test computations
@@ -59,19 +77,33 @@ func main() {
 	filenameChiSq1000_10 := rootDir + "/cmd/files/benchmark_chisq_1000_10.csv"
 	filenameChiSq1000_20 := rootDir + "/cmd/files/benchmark_chisq_1000_20.csv"
 
-	/* Student's t-test */
-	runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	if *ttest || allTests {
+		/* Student's t-test */
+		runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, *sharesOnly, *debug, *example)
+	}
 
-	/* Pearson's correlation test */
-	runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+	if *corrtest || allTests {
 
-	/* Chi-squared test */
-	runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, false, useShares, debug)
-	runChiSqBechmarks(mpc, filenameChiSq1000_20, numParties, networkLatency*time.Millisecond, false, useShares, debug)
+		/* Pearson's correlation test */
+		runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, *sharesOnly, *debug, *example)
+
+	}
+
+	if *chisqtest || allTests {
+
+		if *example {
+			runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, *sharesOnly, *debug, *example)
+
+		} else {
+			/* Chi-squared test */
+			runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, *sharesOnly, *debug, *example)
+			runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, *sharesOnly, *debug, *example)
+			runChiSqBechmarks(mpc, filenameChiSq1000_20, numParties, networkLatency*time.Millisecond, *sharesOnly, *debug, *example)
+		}
+	}
 }
 
-func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool) {
+func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, onlyUseShares bool, debug bool, example bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -95,7 +127,7 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	if onlyUseShares {
 		chi2test, datasetSize, numCategories, dealerSetupTime, totalTime, paillierTime, divTime, numSharesCreated = exampleChiSquaredSimulationWithSecretSharing(mpc, filename, debug)
 	} else {
-		chi2test, datasetSize, numCategories, totalTime, paillierTime, divTime, numSharesCreated = exampleChiSquaredSimulation(mpc, filename, debug)
+		chi2test, datasetSize, numCategories, totalTime, paillierTime, divTime, numSharesCreated = ChiSquaredTestSimulation(mpc, filename, debug, example)
 	}
 
 	fmt.Println("************************************************")
@@ -107,13 +139,20 @@ func runChiSqBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	fmt.Printf("Total number of shares:          %d\n", numSharesCreated)
 	fmt.Printf("Dealer setup time (s): 	         %f\n", dealerSetupTime.Seconds())
 	fmt.Printf("Chi^2 Test runtime (s):          %f\n", totalTime.Seconds())
-	fmt.Printf("  Computation runtime (s):       %f\n", paillierTime.Seconds())
-	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
+	fmt.Printf("---Computation runtime (s):       %f\n", paillierTime.Seconds())
+	fmt.Printf("---Division runtime (s):          %f\n", divTime.Seconds())
 	fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 	fmt.Println("************************************************")
 }
 
-func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool) {
+func runTTestBechmarks(
+	mpc *hypocert.MPC,
+	filename string,
+	numParties int,
+	latency time.Duration,
+	onlyUseShares bool,
+	debug bool,
+	example bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -136,7 +175,7 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	if onlyUseShares {
 		ttest, datasetSize, dealerSetupTime, totalTime, paillierTime, divTime, numSharesCreated = exampleTTestSimulationWithSecretSharing(mpc, filename, debug)
 	} else {
-		ttest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated = exampleTTestSimulation(mpc, filename, debug)
+		ttest, datasetSize, totalTime, paillierTime, divTime, numSharesCreated = TTestSimulation(mpc, filename, debug, example)
 	}
 
 	fmt.Println("************************************************")
@@ -147,14 +186,21 @@ func runTTestBechmarks(mpc *hypocert.MPC, filename string, numParties int, laten
 	fmt.Printf("Total number of shares:      	 %d\n", numSharesCreated)
 	fmt.Printf("Dealer setup time (s): 	         %f\n", dealerSetupTime.Seconds())
 	fmt.Printf("T-Test runtime (s): 	         %f\n", totalTime.Seconds())
-	fmt.Printf("  Computation runtime (s):       %f\n", paillierTime.Seconds())
-	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
+	fmt.Printf("---Computation runtime (s):       %f\n", paillierTime.Seconds())
+	fmt.Printf("---Division runtime (s):          %f\n", divTime.Seconds())
 	fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 	fmt.Println("************************************************")
 
 }
 
-func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, latency time.Duration, zkp bool, onlyUseShares bool, debug bool) {
+func runPearsonsBechmarks(
+	mpc *hypocert.MPC,
+	filename string,
+	numParties int,
+	latency time.Duration,
+	onlyUseShares bool,
+	debug bool,
+	example bool) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -172,13 +218,12 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 	var totalTime time.Duration
 	var computeTime time.Duration
 	var divTime time.Duration
-	var cmpTime time.Duration
 	var numSharesCreated int
 
 	if onlyUseShares {
-		ptest, datasetSize, dealerSetupTime, totalTime, computeTime, cmpTime, divTime, numSharesCreated = examplePearsonsTestSimulationWihSecretSharing(mpc, filename, debug)
+		ptest, datasetSize, dealerSetupTime, totalTime, computeTime, divTime, numSharesCreated = examplePearsonsTestSimulationWihSecretSharing(mpc, filename, debug)
 	} else {
-		ptest, datasetSize, totalTime, computeTime, cmpTime, divTime, numSharesCreated = examplePearsonsTestSimulation(mpc, filename, debug)
+		ptest, datasetSize, totalTime, computeTime, divTime, numSharesCreated = PearsonsTestSimulation(mpc, filename, debug, example)
 	}
 
 	fmt.Println("************************************************")
@@ -189,9 +234,8 @@ func runPearsonsBechmarks(mpc *hypocert.MPC, filename string, numParties int, la
 	fmt.Printf("Total number of shares:          %d\n", numSharesCreated)
 	fmt.Printf("Dealer setup time (s): 	         %f\n", dealerSetupTime.Seconds())
 	fmt.Printf("Pearson's Test runtime (s):      %f\n", totalTime.Seconds())
-	fmt.Printf("  Computation runtime (s):       %f\n", computeTime.Seconds())
-	fmt.Printf("  Comparison runtime (s):        %f\n", cmpTime.Seconds())
-	fmt.Printf("  Division runtime (s):          %f\n", divTime.Seconds())
+	fmt.Printf("---Computation runtime (s):       %f\n", computeTime.Seconds())
+	fmt.Printf("---Division runtime (s):          %f\n", divTime.Seconds())
 	fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 	fmt.Println("************************************************")
 
@@ -208,7 +252,7 @@ func printWelcome() {
 	fmt.Println("	 __/ | |                              ")
 	fmt.Println("	|___/|_|                           ")
 	fmt.Println()
-	fmt.Println("Certified Hypothesis Testing")
+	fmt.Println("Certified Hypothesis Testing (System Simulation)")
 	fmt.Println("=====================================")
 	fmt.Println("DISCLAIMER: this software if intended for simulation and proof-of-concept purposes only.")
 	fmt.Println("=====================================")
