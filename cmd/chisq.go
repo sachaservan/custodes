@@ -13,13 +13,15 @@ import (
 	"github.com/sachaservan/paillier"
 )
 
-func ChiSquaredTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, example bool) (*big.Float, int, int, time.Duration, time.Duration, time.Duration, int) {
+func ChiSquaredTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, example bool) *TestResult {
 
 	//**************************************************************************************
 	//**************************************************************************************
 	// START DEALER CODE
 	//**************************************************************************************
 	//**************************************************************************************
+
+	dealerSetupStart := time.Now()
 
 	var x [][]int64
 	var err error
@@ -30,14 +32,14 @@ func ChiSquaredTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, ex
 			panic(err)
 		}
 	} else {
-		// Test dataset (result should be 1.33...)
+		// Test dataset (result should be 0.666...)
 		x = [][]int64{
-			{1, 0}, {1, 0}, {1, 0}, {1, 0}, {1, 0}, {1, 0}, {1, 0}, {1, 0},
-			{0, 1}, {0, 1}, {0, 1}, {0, 1},
+			{1, 0}, {1, 0}, {0, 1},
+			{0, 1}, {0, 1}, {0, 1},
 		}
 
 		fmt.Println("Example dataset: ")
-		fmt.Println("   ------------------------------------------------------------------------------------------------")
+		fmt.Println("   -------------------------------------")
 		fmt.Print("X: |")
 		for i := 0; i < len(x); i++ {
 			fmt.Print("(" + strconv.Itoa(int(x[i][0])) + ", " + strconv.Itoa(int(x[i][1])) + ")")
@@ -47,7 +49,7 @@ func ChiSquaredTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, ex
 				fmt.Println("|")
 			}
 		}
-		fmt.Println("   ------------------------------------------------------------------------------------------------")
+		fmt.Println("   -------------------------------------")
 		fmt.Println()
 	}
 
@@ -71,6 +73,8 @@ func ChiSquaredTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, ex
 	}
 
 	wg.Wait()
+
+	dealerSetupTime := time.Now().Sub(dealerSetupStart)
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -127,8 +131,8 @@ func ChiSquaredTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, ex
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			residual[i] = mpc.Pk.ESub(h[i], expectedValues[i])
-			residual[i] = mpc.EMult(residual[i], residual[i])
+			res := mpc.Pk.ESub(h[i], expectedValues[i])
+			residual[i] = mpc.EMult(res, res)
 		}(i)
 	}
 	wg.Wait()
@@ -164,7 +168,7 @@ func ChiSquaredTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, ex
 		chi2 = mpc.Add(chi2, xi[i])
 	}
 
-	chi2 = mpc.TruncPR(chi2, 2*mpc.K, mpc.FPPrecBits)
+	chi2 = mpc.TruncPR(chi2, mpc.K, mpc.FPPrecBits)
 	chi2Stat := mpc.RevealShareFP(chi2, mpc.FPPrecBits)
 	endTime := time.Now()
 
@@ -177,5 +181,15 @@ func ChiSquaredTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, ex
 	divTime := time.Now().Sub(endTimePaillier)
 	paillierTime := endTimePaillier.Sub(startTime)
 
-	return chi2Stat, numRows, numCategories, totalTime, paillierTime, divTime, mpc.DeleteAllShares()
+	return &TestResult{
+		Test:             "CHI2",
+		Value:            chi2Stat,
+		NumRows:          numRows,
+		NumColumns:       numCategories,
+		TotalRuntime:     totalTime,
+		ComputeRuntime:   paillierTime,
+		DivRuntime:       divTime,
+		SetupTime:        dealerSetupTime,
+		NumSharesCreated: mpc.DeleteAllShares(),
+	}
 }

@@ -11,13 +11,15 @@ import (
 	"github.com/sachaservan/paillier"
 )
 
-func TTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, example bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
+func TTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, example bool) *TestResult {
 
 	//**************************************************************************************
 	//**************************************************************************************
 	// START DEALER CODE
 	//**************************************************************************************
 	//**************************************************************************************
+
+	dealerSetupStart := time.Now()
 
 	var x []float64
 	var y []float64
@@ -81,6 +83,8 @@ func TTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, example boo
 	}
 
 	wg.Wait()
+
+	dealerSetupTime := time.Now().Sub(dealerSetupStart)
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -180,8 +184,15 @@ func TTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, example boo
 	divTime := time.Now().Sub(endTimePaillier)
 	paillierTime := endTimePaillier.Sub(startTime)
 
-	// delete shares
-	numShares := mpc.DeleteAllShares()
-
-	return tstat, len(x), totalTime, paillierTime, divTime, numShares
+	return &TestResult{
+		Test:             "T-TEST",
+		Value:            tstat,
+		NumRows:          len(x),
+		NumColumns:       2,
+		TotalRuntime:     totalTime,
+		ComputeRuntime:   paillierTime,
+		DivRuntime:       divTime,
+		SetupTime:        dealerSetupTime,
+		NumSharesCreated: mpc.DeleteAllShares(),
+	}
 }

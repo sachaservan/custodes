@@ -12,13 +12,15 @@ import (
 )
 
 // Simulation of Pearson's coorelation coefficient
-func PearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, example bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, int) {
+func PearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, example bool) *TestResult {
 
 	//**************************************************************************************
 	//**************************************************************************************
 	// START DEALER CODE
 	//**************************************************************************************
 	//**************************************************************************************
+
+	dealerSetupStart := time.Now()
 
 	var x []float64
 	var y []float64
@@ -73,6 +75,8 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, exam
 		eX[i] = mpc.Pk.Encrypt(plaintextX)
 		eY[i] = mpc.Pk.Encrypt(plaintextY)
 	}
+
+	dealerSetupTime := time.Now().Sub(dealerSetupStart)
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -157,13 +161,13 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, exam
 
 	res := mpc.FPDivision(numeratorShare, denominatorShare)
 
-	pstat2 := mpc.RevealShareFP(res, mpc.FPPrecBits)
-	pstat := pstat2.Sqrt(pstat2)
+	stat2 := mpc.RevealShareFP(res, mpc.FPPrecBits)
+	stat := stat2.Sqrt(stat2)
 
 	endTime := time.Now()
 
 	if debug {
-		fmt.Printf("[DEBUG] PEARSON CORRELATION STATISTIC, r = %s\n", pstat.String())
+		fmt.Printf("[DEBUG] PEARSON CORRELATION STATISTIC, r = %s\n", stat.String())
 		fmt.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
 	}
 
@@ -171,7 +175,15 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, exam
 	divTime := time.Now().Sub(endTimePaillier)
 	paillierTime := endTimePaillier.Sub(startTime)
 
-	numShares := mpc.DeleteAllShares()
-
-	return pstat, len(x), totalTime, paillierTime, divTime, numShares
+	return &TestResult{
+		Test:             "PEARSON",
+		Value:            stat,
+		NumRows:          len(x),
+		NumColumns:       2,
+		TotalRuntime:     totalTime,
+		ComputeRuntime:   paillierTime,
+		DivRuntime:       divTime,
+		SetupTime:        dealerSetupTime,
+		NumSharesCreated: mpc.DeleteAllShares(),
+	}
 }
