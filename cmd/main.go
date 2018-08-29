@@ -74,32 +74,65 @@ func main() {
 
 	// filenames to use for the statistical test computations
 	filename1000 := rootDir + "/cmd/datasets/benchmark_1000.csv"
+	filename5000 := rootDir + "/cmd/datasets/benchmark_5000.csv"
+	filename10000 := rootDir + "/cmd/datasets/benchmark_10000.csv"
+
 	filenameChiSq1000_5 := rootDir + "/cmd/datasets/benchmark_chisq_1000_5.csv"
 	filenameChiSq1000_10 := rootDir + "/cmd/datasets/benchmark_chisq_1000_10.csv"
 	filenameChiSq1000_20 := rootDir + "/cmd/datasets/benchmark_chisq_1000_20.csv"
 
+	filenameChiSq5000_5 := rootDir + "/cmd/datasets/benchmark_chisq_5000_5.csv"
+	filenameChiSq5000_10 := rootDir + "/cmd/datasets/benchmark_chisq_5000_10.csv"
+	filenameChiSq5000_20 := rootDir + "/cmd/datasets/benchmark_chisq_5000_20.csv"
+
+	filenameChiSq10000_5 := rootDir + "/cmd/datasets/benchmark_chisq_10000_5.csv"
+	filenameChiSq10000_10 := rootDir + "/cmd/datasets/benchmark_chisq_10000_10.csv"
+	filenameChiSq10000_20 := rootDir + "/cmd/datasets/benchmark_chisq_10000_20.csv"
+
 	if *ttest || allTests {
-		/* Student's t-test */
-		runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+		if *example {
+			runTTestBechmarks(mpc, "", numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+		} else {
+			/* Student's t-test */
+			runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+		}
+
 	}
 
 	if *corrtest || allTests {
 
-		/* Pearson's correlation test */
-		runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+		if *example {
+			runPearsonsBechmarks(mpc, "", numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+		} else {
+
+			/* Pearson's correlation test */
+			runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			runPearsonsBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			runPearsonsBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+		}
 
 	}
 
 	if *chisqtest || allTests {
 
 		if *example {
-			runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			runChiSqBechmarks(mpc, "", numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 
 		} else {
 			/* Chi-squared test */
 			runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runChiSqBechmarks(mpc, filenameChiSq1000_20, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+
+			runChiSqBechmarks(mpc, filenameChiSq5000_5, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			runChiSqBechmarks(mpc, filenameChiSq5000_10, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			runChiSqBechmarks(mpc, filenameChiSq5000_20, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+
+			runChiSqBechmarks(mpc, filenameChiSq10000_5, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			runChiSqBechmarks(mpc, filenameChiSq10000_10, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			runChiSqBechmarks(mpc, filenameChiSq10000_20, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 		}
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/sachaservan/paillier"
@@ -17,20 +18,17 @@ import (
 
 type ProtocolType int
 
+// simulates records stored on the blockchain
 const (
-	TruncPR ProtocolType = iota
-	Mult
-	FPMult
-	ECMultFP
-	Reveal
-	RandInt
-	Division
+	ETruncPR ProtocolType = iota
+	EMult
+	Decrypt
 )
 
 type MPCTranscriptEntry struct {
 	Protocol ProtocolType           // type of protocol
-	CtIn     *[]paillier.Ciphertext // inputs to the protocol
-	CtOut    *paillier.Ciphertext   // ciphertext output
+	CtIn     []*paillier.Ciphertext // inputs to the protocol
+	CtOut    []*paillier.Ciphertext // ciphertext output
 	PtOut    *big.Int               // plaintext output
 }
 
@@ -39,25 +37,20 @@ type MPCTranscript struct {
 	next    int
 }
 
-func newMPCTranscript(size int) *MPCTranscript {
-	return &MPCTranscript{make([]*MPCTranscriptEntry, size), 0}
-}
-
-func (trans *MPCTranscript) addEntry(entry *MPCTranscriptEntry) {
-	trans.Entries[trans.next] = entry
+type EncryptedDataset struct {
+	Data    [][]*paillier.Ciphertext
+	NumRows int
+	NumCols int
 }
 
 type TestResult struct {
 	Test             string
 	Value            *big.Float
-	NumRows          int
-	NumColumns       int
 	TotalRuntime     time.Duration
 	ComputeRuntime   time.Duration
 	DivRuntime       time.Duration
-	SetupTime        time.Duration
 	NumSharesCreated int
-	Transcript       []*MPCTranscriptEntry // transcript of all MPC protocols
+	Transcript       *MPCTranscript // transcript of all MPC protocols
 }
 
 func runChiSqBechmarks(
@@ -80,20 +73,20 @@ func runChiSqBechmarks(
 	fmt.Println("Running Chi^2 Test...")
 	fmt.Println("------------------------------------------------")
 
-	var testResult *TestResult
-	testResult = ChiSquaredTestSimulation(mpc, filename, debug, example)
+	encD, setupTime := encryptCategoricalDataset(mpc, filename, example)
+	testResult := ChiSquaredTestSimulation(mpc, encD, debug)
 
 	if writeToFile {
-		writeTestResultsToFile(testResult, runId, numParties)
+		writeTestResultsToFile(testResult, encD, runId, numParties)
 	} else {
 		fmt.Println("************************************************")
 		fmt.Println("Chi^2 statistic:                 " + testResult.Value.String())
-		fmt.Printf("Dataset size:                    %d\n", testResult.NumRows)
-		fmt.Printf("Number of categories:            %d\n", testResult.NumColumns)
+		fmt.Printf("Dataset size:                    %d\n", encD.NumRows)
+		fmt.Printf("Number of categories:            %d\n", encD.NumCols)
 		fmt.Printf("Number of parties:               %d\n", numParties)
 		fmt.Printf("Threshold:                       %d\n", mpc.Threshold)
 		fmt.Printf("Total number of shares:          %d\n", testResult.NumSharesCreated)
-		fmt.Printf("Dealer setup time (s): 	         %f\n", testResult.SetupTime.Seconds())
+		fmt.Printf("Dealer setup time (s): 	         %f\n", setupTime.Seconds())
 		fmt.Printf("Chi^2 Test runtime (s):          %f\n", testResult.TotalRuntime.Seconds())
 		fmt.Printf("---Computation runtime (s):      %f\n", testResult.ComputeRuntime.Seconds())
 		fmt.Printf("---Division runtime (s):         %f\n", testResult.DivRuntime.Seconds())
@@ -122,23 +115,31 @@ func runTTestBechmarks(
 	fmt.Println("Running T-Test...")
 	fmt.Println("------------------------------------------------")
 
-	var testResult *TestResult
-	testResult = TTestSimulation(mpc, filename, debug, example)
+	encD, setupTime := encryptDataset(mpc, filename, example)
+
+	if debug {
+		fmt.Println("[DEBUG] Finished encrypting dataset")
+	}
+
+	testResult := TTestSimulation(mpc, encD, debug)
+	verified, auditTime := TTestAuditSimulation(mpc.Pk, mpc.FPPrecBits, encD, testResult.Transcript)
 
 	if writeToFile {
-		writeTestResultsToFile(testResult, runId, numParties)
+		writeTestResultsToFile(testResult, encD, runId, numParties)
 	} else {
 		fmt.Println("************************************************")
 		fmt.Println("T-Test statistic:                " + testResult.Value.String())
-		fmt.Printf("Dataset size:                    %d\n", testResult.NumRows)
+		fmt.Printf("Dataset size:                    %d\n", encD.NumRows)
 		fmt.Printf("Number of parties:               %d\n", numParties)
 		fmt.Printf("Threshold:                       %d\n", mpc.Threshold)
 		fmt.Printf("Total number of shares:      	 %d\n", testResult.NumSharesCreated)
-		fmt.Printf("Dealer setup time (s): 	         %f\n", testResult.SetupTime.Seconds())
+		fmt.Printf("Dealer setup time (s): 	         %f\n", setupTime.Seconds())
 		fmt.Printf("T-Test runtime (s): 	         %f\n", testResult.TotalRuntime.Seconds())
 		fmt.Printf("---Computation runtime (s):      %f\n", testResult.ComputeRuntime.Seconds())
 		fmt.Printf("---Division runtime (s):         %f\n", testResult.DivRuntime.Seconds())
 		fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
+		fmt.Printf("Audit verifies:                  %t\n", verified)
+		fmt.Printf("Audit time (s):                  %f\n", auditTime.Seconds())
 		fmt.Println("************************************************")
 	}
 }
@@ -163,25 +164,166 @@ func runPearsonsBechmarks(
 	fmt.Println("Running Pearson's Coorelation Test...")
 	fmt.Println("------------------------------------------------")
 
-	var testResult *TestResult
-	testResult = PearsonsTestSimulation(mpc, filename, debug, example)
+	encD, setupTime := encryptDataset(mpc, filename, example)
+
+	if debug {
+		fmt.Println("[DEBUG] Finished encrypting dataset")
+	}
+
+	testResult := PearsonsTestSimulation(mpc, encD, debug)
 
 	if writeToFile {
-		writeTestResultsToFile(testResult, runId, numParties)
+		writeTestResultsToFile(testResult, encD, runId, numParties)
 	} else {
 		fmt.Println("************************************************")
 		fmt.Println("Pearson's statistic:             " + testResult.Value.String())
-		fmt.Printf("Dataset size:                    %d\n", testResult.NumRows)
+		fmt.Printf("Dataset size:                    %d\n", encD.NumRows)
 		fmt.Printf("Number of parties:               %d\n", numParties)
 		fmt.Printf("Threshold:                       %d\n", mpc.Threshold)
 		fmt.Printf("Total number of shares:          %d\n", testResult.NumSharesCreated)
-		fmt.Printf("Dealer setup time (s): 	         %f\n", testResult.SetupTime.Seconds())
+		fmt.Printf("Dealer setup time (s): 	         %f\n", setupTime.Seconds())
 		fmt.Printf("Pearson's Test runtime (s):      %f\n", testResult.TotalRuntime.Seconds())
 		fmt.Printf("---Computation runtime (s):      %f\n", testResult.ComputeRuntime.Seconds())
 		fmt.Printf("---Division runtime (s):         %f\n", testResult.DivRuntime.Seconds())
 		fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
 		fmt.Println("************************************************")
 	}
+}
+
+func newMPCTranscript(size int) *MPCTranscript {
+	return &MPCTranscript{make([]*MPCTranscriptEntry, size), 0}
+}
+
+func (trans *MPCTranscript) addEntry(entry *MPCTranscriptEntry) {
+	trans.Entries[trans.next] = entry
+	trans.next++
+}
+
+func encryptCategoricalDataset(mpc *hypocert.MPC, filepath string, example bool) (*EncryptedDataset, time.Duration) {
+	dealerSetupStart := time.Now()
+
+	var x [][]int64
+	var err error
+
+	if !example {
+		x, err = parseCategoricalDataset(filepath)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		// Test dataset (result should be 0.666...)
+		x = [][]int64{
+			{1, 0}, {1, 0}, {0, 1},
+			{0, 1}, {0, 1}, {0, 1},
+		}
+
+		fmt.Println("Example dataset: ")
+		fmt.Println("   -------------------------------------")
+		fmt.Print("X: |")
+		for i := 0; i < len(x); i++ {
+			fmt.Print("(" + strconv.Itoa(int(x[i][0])) + ", " + strconv.Itoa(int(x[i][1])) + ")")
+			if i+1 < len(x) {
+				fmt.Print(", ")
+			} else {
+				fmt.Println("|")
+			}
+		}
+		fmt.Println("   -------------------------------------")
+		fmt.Println()
+	}
+
+	numCategories := len(x[0])
+	numRows := len(x)
+
+	var eX [][]*paillier.Ciphertext
+	eX = make([][]*paillier.Ciphertext, numRows)
+
+	var wg sync.WaitGroup
+	for i := 0; i < numRows; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			eX[i] = make([]*paillier.Ciphertext, numCategories)
+			for j := 0; j < numCategories; j++ {
+				pt := mpc.Pk.EncodeFixedPoint(big.NewFloat(float64(x[i][j])), mpc.FPPrecBits)
+				eX[i][j] = mpc.Pk.Encrypt(pt)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	return &EncryptedDataset{
+			Data:    eX,
+			NumRows: numRows,
+			NumCols: numCategories,
+		},
+		time.Now().Sub(dealerSetupStart)
+}
+
+func encryptDataset(mpc *hypocert.MPC, filepath string, example bool) (*EncryptedDataset, time.Duration) {
+
+	dealerSetupStart := time.Now()
+
+	var x []float64
+	var y []float64
+
+	var err error
+	if !example {
+		x, y, err = parseDataset(filepath)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		// Test dataset (result should be 1.99 for t-test, 0.29... for pearson)
+		x = []float64{105, 119, 100, 97, 96, 101, 94, 95, 98}
+		y = []float64{96, 99, 94, 89, 96, 93, 88, 105, 88}
+
+		fmt.Println("Example dataset: ")
+		fmt.Println("   ----------------------------------------")
+		fmt.Print("X: |")
+		for i := 0; i < len(x); i++ {
+			fmt.Print(strconv.Itoa(int(x[i])))
+			if i+1 < len(x) {
+				fmt.Print(", ")
+			} else {
+				fmt.Print("|")
+			}
+		}
+		fmt.Print("\nY: |")
+		for i := 0; i < len(y); i++ {
+			fmt.Print(strconv.Itoa(int(y[i])))
+			if i+1 < len(y) {
+				fmt.Print(", ")
+			} else {
+				fmt.Print("   |")
+			}
+		}
+		fmt.Println()
+		fmt.Println("   ----------------------------------------")
+	}
+
+	numRows := len(y)
+
+	var eX []*paillier.Ciphertext
+	eX = make([]*paillier.Ciphertext, numRows)
+	var eY []*paillier.Ciphertext
+	eY = make([]*paillier.Ciphertext, numRows)
+
+	for i := 0; i < numRows; i++ {
+
+		plaintextX := mpc.Pk.EncodeFixedPoint(big.NewFloat(x[i]), mpc.FPPrecBits)
+		plaintextY := mpc.Pk.EncodeFixedPoint(big.NewFloat(y[i]), mpc.FPPrecBits)
+		eX[i] = mpc.Pk.Encrypt(plaintextX)
+		eY[i] = mpc.Pk.Encrypt(plaintextY)
+	}
+
+	return &EncryptedDataset{
+			Data:    [][]*paillier.Ciphertext{eX, eY},
+			NumRows: numRows,
+			NumCols: 2,
+		},
+		time.Now().Sub(dealerSetupStart)
 }
 
 func parseCategoricalDataset(file string) ([][]int64, error) {
@@ -261,10 +403,10 @@ func parseDataset(file string) ([]float64, []float64, error) {
 
 }
 
-func writeTestResultsToFile(r *TestResult, runId int, numParties int) {
+func writeTestResultsToFile(r *TestResult, encD *EncryptedDataset, runId int, numParties int) {
 	filename := "./" + strconv.Itoa(runId) + "_" +
-		r.Test + "_" + strconv.Itoa(r.NumRows) + "_" +
-		strconv.Itoa(r.NumColumns) + "_" +
+		r.Test + "_" + strconv.Itoa(encD.NumRows) + "_" +
+		strconv.Itoa(encD.NumCols) + "_" +
 		strconv.Itoa(numParties) + "_" + ".json"
 
 	reportJson, _ := json.MarshalIndent(r, "", "\t")

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"hypocert"
 	"math/big"
-	"strconv"
 	"sync"
 	"time"
 
@@ -12,83 +11,16 @@ import (
 )
 
 // Simulation of Pearson's coorelation coefficient
-func PearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, example bool) *TestResult {
+func PearsonsTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug bool) *TestResult {
 
-	//**************************************************************************************
-	//**************************************************************************************
-	// START DEALER CODE
-	//**************************************************************************************
-	//**************************************************************************************
-
-	dealerSetupStart := time.Now()
-
-	var x []float64
-	var y []float64
-	var err error
-	if !example {
-		x, y, err = parseDataset(filepath)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		// Test dataset (result should be 0.96...)
-		x = []float64{56, 56, 65, 65, 50, 25, 87, 44, 35}
-		y = []float64{87, 91, 85, 91, 75, 28, 122, 66, 58}
-
-		fmt.Println("   -------------------------------------")
-		fmt.Print("X: |")
-		for i := 0; i < len(x); i++ {
-			fmt.Print(strconv.Itoa(int(x[i])))
-			if i+1 < len(x) {
-				fmt.Print(", ")
-			} else {
-				fmt.Print(" |")
-			}
-		}
-		fmt.Print("\nY: |")
-		for i := 0; i < len(y); i++ {
-			fmt.Print(strconv.Itoa(int(y[i])))
-			if i+1 < len(y) {
-				fmt.Print(", ")
-			} else {
-				fmt.Print("|")
-			}
-		}
-		fmt.Println()
-		fmt.Println("   -------------------------------------")
-	}
-
-	if debug && !example {
-		fmt.Printf("Finished parsing CSV file with no errors! |X|: %d, |Y|: %d\n", len(x), len(y))
-	}
-
-	numRows := len(y)
-
-	var eX []*paillier.Ciphertext
-	eX = make([]*paillier.Ciphertext, numRows)
-	var eY []*paillier.Ciphertext
-	eY = make([]*paillier.Ciphertext, numRows)
-
-	for i := 0; i < numRows; i++ {
-		plaintextX := mpc.Pk.EncodeFixedPoint(big.NewFloat(x[i]), mpc.FPPrecBits)
-		plaintextY := mpc.Pk.EncodeFixedPoint(big.NewFloat(y[i]), mpc.FPPrecBits)
-		eX[i] = mpc.Pk.Encrypt(plaintextX)
-		eY[i] = mpc.Pk.Encrypt(plaintextY)
-	}
-
-	dealerSetupTime := time.Now().Sub(dealerSetupStart)
-
-	//**************************************************************************************
-	//**************************************************************************************
-	// END DEALER CODE
-	//**************************************************************************************
-	//**************************************************************************************
+	eX := dataset.Data[0]
+	eY := dataset.Data[1]
 
 	// keep track of runtime
 	startTime := time.Now()
 
 	// store for later use
-	invNumRows := big.NewFloat(1.0 / float64(numRows))
+	invNumRows := big.NewFloat(1.0 / float64(dataset.NumRows))
 
 	// sum of the values
 	sumX := mpc.Pk.EAdd(eX...)
@@ -104,16 +36,16 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, exam
 	}
 
 	// compute (x_i - mean_x)(y_i - mean_y)
-	prodsXY := make([]*paillier.Ciphertext, numRows)
+	prodsXY := make([]*paillier.Ciphertext, dataset.NumRows)
 
 	// SUM (x_i - mean_x)^2
-	devsX2 := make([]*paillier.Ciphertext, numRows)
+	devsX2 := make([]*paillier.Ciphertext, dataset.NumRows)
 
 	// SUM (y_i - mean_y)^2
-	devsY2 := make([]*paillier.Ciphertext, numRows)
+	devsY2 := make([]*paillier.Ciphertext, dataset.NumRows)
 
 	var wg sync.WaitGroup
-	for i := 0; i < numRows; i++ {
+	for i := 0; i < dataset.NumRows; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -178,12 +110,9 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, filepath string, debug bool, exam
 	return &TestResult{
 		Test:             "PEARSON",
 		Value:            stat,
-		NumRows:          len(x),
-		NumColumns:       2,
 		TotalRuntime:     totalTime,
 		ComputeRuntime:   paillierTime,
 		DivRuntime:       divTime,
-		SetupTime:        dealerSetupTime,
 		NumSharesCreated: mpc.DeleteAllShares(),
 	}
 }
