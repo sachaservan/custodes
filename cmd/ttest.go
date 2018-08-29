@@ -175,7 +175,7 @@ func TTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug bool) *
 
 func TTestAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *EncryptedDataset, trans *MPCTranscript) (bool, time.Duration) {
 
-	verfified := true
+	verified := true
 
 	eX := dataset.Data[0]
 	eY := dataset.Data[1]
@@ -194,11 +194,11 @@ func TTestAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *Encrypted
 	meanYTmp := pk.ECMult(sumY, invNumRowsEncoded)
 
 	if meanXTmp.C.Cmp(trans.Entries[0].CtIn[0].C) != 0 {
-		verfified = false
+		verified = false
 	}
 
 	if meanYTmp.C.Cmp(trans.Entries[0].CtIn[1].C) != 0 {
-		verfified = false
+		verified = false
 	}
 
 	meanX := trans.Entries[0].CtOut[0]
@@ -212,11 +212,11 @@ func TTestAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *Encrypted
 		sdy := pk.ESub(eY[i], meanY)
 
 		if sdx.C.Cmp(trans.Entries[i+1].CtIn[0].C) != 0 {
-			verfified = false
+			verified = false
 		}
 
 		if sdy.C.Cmp(trans.Entries[i+1].CtIn[1].C) != 0 {
-			verfified = false
+			verified = false
 		}
 
 		sumsSdX[i] = trans.Entries[i+1].CtOut[0]
@@ -232,11 +232,11 @@ func TTestAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *Encrypted
 	sdYTmp := pk.ECMult(sdY, denEncoded)
 
 	if sdXTmp.C.Cmp(trans.Entries[numRows+1].CtIn[0].C) != 0 {
-		verfified = false
+		verified = false
 	}
 
 	if sdYTmp.C.Cmp(trans.Entries[numRows+1].CtIn[1].C) != 0 {
-		verfified = false
+		verified = false
 	}
 
 	sdX = trans.Entries[numRows+1].CtOut[0]
@@ -244,13 +244,13 @@ func TTestAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *Encrypted
 
 	numerator := pk.ESub(meanX, meanY)
 	if numerator.C.Cmp(trans.Entries[numRows+2].CtIn[0].C) != 0 {
-		verfified = false
+		verified = false
 	}
 
 	numeratorTmp := trans.Entries[numRows+2].CtOut[0]
 
 	if numeratorTmp.C.Cmp(trans.Entries[numRows+3].CtIn[0].C) != 0 {
-		verfified = false
+		verified = false
 	}
 
 	tx := pk.ESub(pk.ECMult(sdX, big.NewInt(int64(dataset.NumRows))), sdX)
@@ -258,7 +258,7 @@ func TTestAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *Encrypted
 	denominatorTmp := pk.EAdd(tx, ty)
 
 	if denominatorTmp.C.Cmp(trans.Entries[numRows+4].CtIn[0].C) != 0 {
-		verfified = false
+		verified = false
 	}
 
 	denominator := trans.Entries[numRows+4].CtOut[0]
@@ -267,10 +267,10 @@ func TTestAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *Encrypted
 	denominatorTmp = pk.ECMult(denominator, df)
 
 	if denominatorTmp.C.Cmp(trans.Entries[numRows+5].CtIn[0].C) != 0 {
-		verfified = false
+		verified = false
 	}
 
 	denominator = trans.Entries[numRows+5].CtOut[0]
 
-	return verfified, time.Now().Sub(startTime)
+	return verified, time.Now().Sub(startTime)
 }

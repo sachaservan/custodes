@@ -75,6 +75,7 @@ func runChiSqBechmarks(
 
 	encD, setupTime := encryptCategoricalDataset(mpc, filename, example)
 	testResult := ChiSquaredTestSimulation(mpc, encD, debug)
+	verified, auditTime := ChiSquaredAuditSimulation(mpc.Pk, mpc.FPPrecBits, encD, testResult.Transcript)
 
 	if writeToFile {
 		writeTestResultsToFile(testResult, encD, runId, numParties)
@@ -91,6 +92,8 @@ func runChiSqBechmarks(
 		fmt.Printf("---Computation runtime (s):      %f\n", testResult.ComputeRuntime.Seconds())
 		fmt.Printf("---Division runtime (s):         %f\n", testResult.DivRuntime.Seconds())
 		fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
+		fmt.Printf("Audit verifies:                  %t\n", verified)
+		fmt.Printf("Audit time (s):                  %f\n", auditTime.Seconds())
 		fmt.Println("************************************************")
 	}
 }
@@ -171,6 +174,7 @@ func runPearsonsBechmarks(
 	}
 
 	testResult := PearsonsTestSimulation(mpc, encD, debug)
+	verified, auditTime := PearsonAuditSimulation(mpc.Pk, mpc.FPPrecBits, encD, testResult.Transcript)
 
 	if writeToFile {
 		writeTestResultsToFile(testResult, encD, runId, numParties)
@@ -186,6 +190,8 @@ func runPearsonsBechmarks(
 		fmt.Printf("---Computation runtime (s):      %f\n", testResult.ComputeRuntime.Seconds())
 		fmt.Printf("---Division runtime (s):         %f\n", testResult.DivRuntime.Seconds())
 		fmt.Printf("Network latency (s):             %f\n", latency.Seconds())
+		fmt.Printf("Audit verifies:                  %t\n", verified)
+		fmt.Printf("Audit time (s):                  %f\n", auditTime.Seconds())
 		fmt.Println("************************************************")
 	}
 }
@@ -218,7 +224,7 @@ func encryptCategoricalDataset(mpc *hypocert.MPC, filepath string, example bool)
 		}
 
 		fmt.Println("Example dataset: ")
-		fmt.Println("   -------------------------------------")
+		fmt.Println("   ------------------------------------------------")
 		fmt.Print("X: |")
 		for i := 0; i < len(x); i++ {
 			fmt.Print("(" + strconv.Itoa(int(x[i][0])) + ", " + strconv.Itoa(int(x[i][1])) + ")")
@@ -228,7 +234,7 @@ func encryptCategoricalDataset(mpc *hypocert.MPC, filepath string, example bool)
 				fmt.Println("|")
 			}
 		}
-		fmt.Println("   -------------------------------------")
+		fmt.Println("   ------------------------------------------------")
 		fmt.Println()
 	}
 
