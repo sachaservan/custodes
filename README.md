@@ -4,12 +4,17 @@ See [hypocert.pdf](https://github.com/sachaservan/hypocert/blob/master/hypocert.
 
 #### Implementation
 
-To run a simulation of the system:  
+Build the system:  
 ```
 cd go/src/hypocert/cmd
 go get
 make
-./hypocert -parties <num_parties> -threshold <corruption-threhsold> -rootdir <path-to-project> -lss
+```
+Running examples:
+```
+cd bin
+./hypocert -example
+./hypocert -parties <num_parties> -threshold <corruption-threhsold> -rootdir <path-to-project dir>
 ```
 
 # License
