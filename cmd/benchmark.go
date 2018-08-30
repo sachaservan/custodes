@@ -53,6 +53,21 @@ type TestResult struct {
 	Transcript       *MPCTranscript // transcript of all MPC protocols
 }
 
+type TestReport struct {
+	Test             string
+	Value            *big.Float
+	TotalRuntime     float64
+	SetupTime        float64
+	ComputeRuntime   float64
+	DivRuntime       float64
+	AuditRuntime     float64
+	NumParties       int
+	NumRows          int
+	NumCols          int
+	NumSharesCreated int
+	RunId            int
+}
+
 func runChiSqBechmarks(
 	mpc *hypocert.MPC,
 	filename string,
@@ -79,7 +94,21 @@ func runChiSqBechmarks(
 		mpc.Pk, mpc.FPPrecBits, encD, testResult.Transcript)
 
 	if writeToFile {
-		writeTestResultsToFile(testResult, encD, runId, numParties)
+		r := &TestReport{
+			Test:             "Chi-Squared",
+			Value:            testResult.Value,
+			TotalRuntime:     testResult.TotalRuntime.Seconds(),
+			SetupTime:        setupTime.Seconds(),
+			ComputeRuntime:   testResult.ComputeRuntime.Seconds(),
+			DivRuntime:       testResult.DivRuntime.Seconds(),
+			AuditRuntime:     auditTime.Seconds(),
+			NumParties:       numParties,
+			NumRows:          encD.NumRows,
+			NumCols:          encD.NumCols,
+			NumSharesCreated: testResult.NumSharesCreated,
+			RunId:            runId,
+		}
+		writeTestResultsToFile(r)
 	} else {
 		fmt.Println("************************************************")
 		fmt.Println("Chi^2 statistic:             " + testResult.Value.String())
@@ -129,7 +158,21 @@ func runTTestBechmarks(
 	verified, auditTime := TTestAuditSimulation(mpc.Pk, mpc.FPPrecBits, encD, testResult.Transcript)
 
 	if writeToFile {
-		writeTestResultsToFile(testResult, encD, runId, numParties)
+		r := &TestReport{
+			Test:             "T-Test",
+			Value:            testResult.Value,
+			TotalRuntime:     testResult.TotalRuntime.Seconds(),
+			SetupTime:        setupTime.Seconds(),
+			ComputeRuntime:   testResult.ComputeRuntime.Seconds(),
+			DivRuntime:       testResult.DivRuntime.Seconds(),
+			AuditRuntime:     auditTime.Seconds(),
+			NumParties:       numParties,
+			NumRows:          encD.NumRows,
+			NumCols:          encD.NumCols,
+			NumSharesCreated: testResult.NumSharesCreated,
+			RunId:            runId,
+		}
+		writeTestResultsToFile(r)
 	} else {
 		fmt.Println("************************************************")
 		fmt.Println("T-Test statistic:            " + testResult.Value.String())
@@ -178,7 +221,21 @@ func runPearsonsBechmarks(
 	verified, auditTime := PearsonAuditSimulation(mpc.Pk, mpc.FPPrecBits, encD, testResult.Transcript)
 
 	if writeToFile {
-		writeTestResultsToFile(testResult, encD, runId, numParties)
+		r := &TestReport{
+			Test:             "Pearson",
+			Value:            testResult.Value,
+			TotalRuntime:     testResult.TotalRuntime.Seconds(),
+			SetupTime:        setupTime.Seconds(),
+			ComputeRuntime:   testResult.ComputeRuntime.Seconds(),
+			DivRuntime:       testResult.DivRuntime.Seconds(),
+			AuditRuntime:     auditTime.Seconds(),
+			NumParties:       numParties,
+			NumRows:          encD.NumRows,
+			NumCols:          encD.NumCols,
+			NumSharesCreated: testResult.NumSharesCreated,
+			RunId:            runId,
+		}
+		writeTestResultsToFile(r)
 	} else {
 		fmt.Println("************************************************")
 		fmt.Println("Pearson's statistic:         " + testResult.Value.String())
@@ -422,14 +479,11 @@ func parseDataset(file string) ([]float64, []float64, error) {
 }
 
 func writeTestResultsToFile(
-	r *TestResult,
-	encD *EncryptedDataset,
-	runId int,
-	numParties int) {
-	filename := "./" + strconv.Itoa(runId) + "_" +
-		r.Test + "_" + strconv.Itoa(encD.NumRows) + "_" +
-		strconv.Itoa(encD.NumCols) + "_" +
-		strconv.Itoa(numParties) + "_" + ".json"
+	r *TestReport) {
+	filename := "./" + strconv.Itoa(r.RunId) + "_" +
+		r.Test + "_" + strconv.Itoa(r.NumRows) + "_" +
+		strconv.Itoa(r.NumCols) + "_" +
+		strconv.Itoa(r.NumParties) + "_" + ".json"
 
 	reportJson, _ := json.MarshalIndent(r, "", "\t")
 	err := ioutil.WriteFile(
