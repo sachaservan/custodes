@@ -481,8 +481,8 @@ func parseDataset(file string) ([]float64, []float64, error) {
 func writeTestResultsToFile(
 	r *TestReport) {
 	filename := "./" + strconv.Itoa(r.RunId) + "_" +
-		r.Test + "_" + strconv.Itoa(r.NumRows) + "_" +
-		strconv.Itoa(r.NumCols) + "_" +
+		r.Test + "_[" + strconv.Itoa(r.NumRows) + "_" +
+		strconv.Itoa(r.NumCols) + "]_n=" +
 		strconv.Itoa(r.NumParties) + "_" + ".json"
 
 	reportJson, _ := json.MarshalIndent(r, "", "\t")
