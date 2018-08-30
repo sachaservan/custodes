@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"hypocert"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/sachaservan/paillier"
 )
 
 // Simulation of Pearson's coorelation coefficient
-func PearsonsTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug bool) *TestResult {
+func PearsonsTestSimulation(
+	mpc *hypocert.MPC,
+	dataset *EncryptedDataset,
+	debug bool) *TestResult {
 
 	eX := dataset.Data[0]
 	eY := dataset.Data[1]
@@ -40,8 +44,10 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug 
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] MEAN X: %s\n", mpc.RevealFP(meanX, mpc.FPPrecBits).String())
-		fmt.Printf("[DEBUG] MEAN Y: %s\n", mpc.RevealFP(meanY, mpc.FPPrecBits).String())
+		fmt.Printf("[DEBUG] MEAN X: %s\n",
+			mpc.RevealFP(meanX, mpc.FPPrecBits).String())
+		fmt.Printf("[DEBUG] MEAN Y: %s\n",
+			mpc.RevealFP(meanY, mpc.FPPrecBits).String())
 	}
 
 	// compute (x_i - mean_x)(y_i - mean_y)
@@ -53,22 +59,30 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug 
 	// SUM (y_i - mean_y)^2
 	devsY2 := make([]*paillier.Ciphertext, dataset.NumRows)
 
+	var wg sync.WaitGroup
+	wg.Add(dataset.NumRows)
+
 	for i := 0; i < dataset.NumRows; i++ {
+		go func(i int) {
+			defer wg.Done()
+			devX := mpc.Pk.ESub(eX[i], meanX)
+			devY := mpc.Pk.ESub(eY[i], meanY)
+			devsX2[i] = mpc.EMult(devX, devX)
+			devsY2[i] = mpc.EMult(devY, devY)
+			prodsXY[i] = mpc.EMult(devX, devY)
 
-		devX := mpc.Pk.ESub(eX[i], meanX)
-		devY := mpc.Pk.ESub(eY[i], meanY)
-		devsX2[i] = mpc.EMult(devX, devX)
-		devsY2[i] = mpc.EMult(devY, devY)
-		prodsXY[i] = mpc.EMult(devX, devY)
-
-		// entry #2 for Mult interactive protocol
-		trans.addEntry(&MPCTranscriptEntry{
-			Protocol: EMult,
-			CtIn:     []*paillier.Ciphertext{devX, devY},
-			CtOut:    []*paillier.Ciphertext{devsX2[i], devsY2[i], prodsXY[i]},
-		})
-
+			// entry #2 for Mult interactive protocol
+			trans.setEntryAtIndex(&MPCTranscriptEntry{
+				Protocol: EMult,
+				CtIn:     []*paillier.Ciphertext{devX, devY},
+				CtOut:    []*paillier.Ciphertext{devsX2[i], devsY2[i], prodsXY[i]},
+			}, i+1)
+		}(i)
 	}
+
+	wg.Wait()
+
+	trans.Next = dataset.NumRows + 1
 
 	// compute sum for all i (x_i - mean_x)(y_i - mean_y)
 	sumXY := mpc.Pk.EAdd(prodsXY...)
@@ -86,7 +100,7 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug 
 		CtOut:    []*paillier.Ciphertext{numeratorTmp},
 	})
 
-	numerator := mpc.ETruncPR(numeratorTmp, 2*mpc.K, 2*mpc.FPPrecBits)
+	numerator := mpc.ETruncPR(numeratorTmp, 3*mpc.K, 3*mpc.FPPrecBits)
 
 	// entry #3 for Trunc interactive protocol
 	trans.addEntry(&MPCTranscriptEntry{
@@ -102,7 +116,7 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug 
 		CtOut:    []*paillier.Ciphertext{denominatorTmp},
 	})
 
-	denominator := mpc.ETruncPR(denominatorTmp, 2*mpc.K, 2*mpc.FPPrecBits)
+	denominator := mpc.ETruncPR(denominatorTmp, 3*mpc.K, 3*mpc.FPPrecBits)
 
 	// entry #4 for Trunc interactive protocol
 	trans.addEntry(&MPCTranscriptEntry{
@@ -113,8 +127,10 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug 
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR:   %s\n", mpc.RevealFP(numerator, mpc.FPPrecBits).String())
-		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", mpc.RevealFP(denominator, mpc.FPPrecBits).String())
+		fmt.Printf("[DEBUG] NUMERATOR:   %s\n",
+			mpc.RevealFP(numerator, mpc.FPPrecBits).String())
+		fmt.Printf("[DEBUG] DENOMINATOR: %s\n",
+			mpc.RevealFP(denominator, mpc.FPPrecBits).String())
 	}
 
 	// convert to shares
@@ -126,8 +142,10 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug 
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR (Share):   %s\n", mpc.RevealShareFP(numeratorShare, mpc.FPPrecBits).String())
-		fmt.Printf("[DEBUG] DENOMINATOR (Share): %s\n", mpc.RevealShareFP(denominatorShare, mpc.FPPrecBits).String())
+		fmt.Printf("[DEBUG] NUMERATOR (Share):   %s\n",
+			mpc.RevealShareFP(numeratorShare, mpc.FPPrecBits).String())
+		fmt.Printf("[DEBUG] DENOMINATOR (Share): %s\n",
+			mpc.RevealShareFP(denominatorShare, mpc.FPPrecBits).String())
 	}
 
 	res := mpc.FPDivision(numeratorShare, denominatorShare)
@@ -157,7 +175,11 @@ func PearsonsTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug 
 	}
 }
 
-func PearsonAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *EncryptedDataset, trans *MPCTranscript) (bool, time.Duration) {
+func PearsonAuditSimulation(
+	pk *paillier.PublicKey,
+	fpprec int,
+	dataset *EncryptedDataset,
+	trans *MPCTranscript) (bool, time.Duration) {
 
 	verified := true
 

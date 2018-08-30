@@ -37,40 +37,55 @@ func ChiSquaredTestSimulation(
 		expectedPercentage[i] = big.NewFloat(1.0 / float64(encD.NumCols))
 	}
 
+	var wg sync.WaitGroup
+
 	// compute the expected value
 	sumTotal := mpc.Pk.EAdd(h...)
 
 	expectedValues := make([]*paillier.Ciphertext, encD.NumCols)
+	wg.Add(encD.NumCols)
 	for i := 0; i < encD.NumCols; i++ {
-		w := mpc.Pk.EncodeFixedPoint(expectedPercentage[i], mpc.FPPrecBits)
-		expectedValueTmp := mpc.Pk.ECMult(sumTotal, w)
-		expectedValues[i] = mpc.ETruncPR(expectedValueTmp, mpc.K, mpc.FPPrecBits)
+		go func(i int) {
+			defer wg.Done()
 
-		// entry #1 for TruncPR interactive protocol
-		trans.addEntry(&MPCTranscriptEntry{
-			Protocol: ETruncPR,
-			CtIn:     []*paillier.Ciphertext{expectedValueTmp},
-			CtOut:    []*paillier.Ciphertext{expectedValues[i]},
-		})
+			w := mpc.Pk.EncodeFixedPoint(expectedPercentage[i], mpc.FPPrecBits)
+			expectedValueTmp := mpc.Pk.ECMult(sumTotal, w)
+			expectedValues[i] = mpc.ETruncPR(expectedValueTmp, mpc.K, mpc.FPPrecBits)
+
+			// entry #1 for TruncPR interactive protocol
+			trans.setEntryAtIndex(&MPCTranscriptEntry{
+				Protocol: ETruncPR,
+				CtIn:     []*paillier.Ciphertext{expectedValueTmp},
+				CtOut:    []*paillier.Ciphertext{expectedValues[i]},
+			}, i)
+		}(i)
 	}
+
+	wg.Wait()
 
 	// compute the residuals
 	residual := make([]*paillier.Ciphertext, encD.NumCols)
+	wg.Add(encD.NumCols)
 	for i := 0; i < encD.NumCols; i++ {
-		res := mpc.Pk.ESub(h[i], expectedValues[i])
-		residual[i] = mpc.EMult(res, res)
+		go func(i int) {
+			defer wg.Done()
 
-		trans.addEntry(&MPCTranscriptEntry{
-			Protocol: EMult,
-			CtIn:     []*paillier.Ciphertext{res, res},
-			CtOut:    []*paillier.Ciphertext{residual[i]},
-		})
+			res := mpc.Pk.ESub(h[i], expectedValues[i])
+			residual[i] = mpc.EMult(res, res)
+
+			trans.setEntryAtIndex(&MPCTranscriptEntry{
+				Protocol: EMult,
+				CtIn:     []*paillier.Ciphertext{res, res},
+				CtOut:    []*paillier.Ciphertext{residual[i]},
+			}, encD.NumCols+i)
+		}(i)
 	}
+
+	wg.Wait()
 
 	residualShares := make([]*party.Share, encD.NumCols)
 	expectedValueShares := make([]*party.Share, encD.NumCols)
 
-	var wg sync.WaitGroup
 	for i := 0; i < encD.NumCols; i++ {
 		wg.Add(1)
 		go func(i int) {

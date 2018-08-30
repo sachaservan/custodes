@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"hypocert"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/sachaservan/paillier"
 )
 
-func TTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug bool) *TestResult {
+func TTestSimulation(
+	mpc *hypocert.MPC,
+	dataset *EncryptedDataset,
+	debug bool) *TestResult {
 
 	eX := dataset.Data[0]
 	eY := dataset.Data[1]
@@ -46,27 +50,36 @@ func TTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug bool) *
 	sumsSdX := make([]*paillier.Ciphertext, dataset.NumRows)
 	sumsSdY := make([]*paillier.Ciphertext, dataset.NumRows)
 
+	var wg sync.WaitGroup
+	wg.Add(dataset.NumRows)
 	for i := 0; i < dataset.NumRows; i++ {
+		go func(i int) {
+			defer wg.Done()
+			sdx := mpc.Pk.ESub(eX[i], meanX)
+			sdy := mpc.Pk.ESub(eY[i], meanY)
+			sumsSdX[i] = mpc.EMult(sdx, sdx)
+			sumsSdY[i] = mpc.EMult(sdy, sdy)
 
-		sdx := mpc.Pk.ESub(eX[i], meanX)
-		sdy := mpc.Pk.ESub(eY[i], meanY)
-		sumsSdX[i] = mpc.EMult(sdx, sdx)
-		sumsSdY[i] = mpc.EMult(sdy, sdy)
-
-		// entry #2 for Mult interactive protocol
-		trans.addEntry(&MPCTranscriptEntry{
-			Protocol: EMult,
-			CtIn:     []*paillier.Ciphertext{sdx, sdy},
-			CtOut:    []*paillier.Ciphertext{sumsSdX[i], sumsSdY[i]},
-		})
-
+			// entry #2 for Mult interactive protocol
+			trans.setEntryAtIndex(&MPCTranscriptEntry{
+				Protocol: EMult,
+				CtIn:     []*paillier.Ciphertext{sdx, sdy},
+				CtOut:    []*paillier.Ciphertext{sumsSdX[i], sumsSdY[i]},
+			}, i+1)
+		}(i)
 	}
+	wg.Wait()
+
+	trans.Next = dataset.NumRows + 1
 
 	// compute the standard deviation
 	sdX := mpc.Pk.EAdd(sumsSdX...)
 	sdY := mpc.Pk.EAdd(sumsSdY...)
 
-	denEncoded := mpc.Pk.EncodeFixedPoint(big.NewFloat(1.0/float64(dataset.NumRows-1)), mpc.FPPrecBits)
+	denEncoded := mpc.Pk.EncodeFixedPoint(
+		big.NewFloat(1.0/float64(dataset.NumRows-1)),
+		mpc.FPPrecBits)
+
 	sdXTmp := mpc.Pk.ECMult(sdX, denEncoded)
 	sdYTmp := mpc.Pk.ECMult(sdY, denEncoded)
 
@@ -113,7 +126,9 @@ func TTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug bool) *
 		CtOut:    []*paillier.Ciphertext{denominator},
 	})
 
-	df := mpc.Pk.EncodeFixedPoint(big.NewFloat(1.0/float64(dataset.NumRows*dataset.NumRows-dataset.NumRows)), mpc.FPPrecBits)
+	df := mpc.Pk.EncodeFixedPoint(
+		big.NewFloat(1.0/float64(dataset.NumRows*dataset.NumRows-dataset.NumRows)),
+		mpc.FPPrecBits)
 	denominatorTmp = mpc.Pk.ECMult(denominator, df)
 
 	denominator = mpc.ETruncPR(denominatorTmp, mpc.K, mpc.FPPrecBits)
@@ -127,8 +142,10 @@ func TTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug bool) *
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR: %s\n", mpc.RevealFP(numerator, mpc.FPPrecBits).String())
-		fmt.Printf("[DEBUG] DENOMINATOR: %s\n", mpc.RevealFP(denominator, mpc.FPPrecBits).String())
+		fmt.Printf("[DEBUG] NUMERATOR: %s\n",
+			mpc.RevealFP(numerator, mpc.FPPrecBits).String())
+		fmt.Printf("[DEBUG] DENOMINATOR: %s\n",
+			mpc.RevealFP(denominator, mpc.FPPrecBits).String())
 	}
 
 	// convert to shares for division
@@ -137,8 +154,10 @@ func TTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug bool) *
 
 	if debug {
 		// sanity check
-		fmt.Printf("[DEBUG] NUMERATOR (share): %s\n", mpc.RevealShare(numeratorShare).String())
-		fmt.Printf("[DEBUG] DENOMINATOR (share): %s\n", mpc.RevealShare(denominatorShare).String())
+		fmt.Printf("[DEBUG] NUMERATOR (share): %s\n",
+			mpc.RevealShare(numeratorShare).String())
+		fmt.Printf("[DEBUG] DENOMINATOR (share): %s\n",
+			mpc.RevealShare(denominatorShare).String())
 	}
 
 	// end paillier benchmark
@@ -173,7 +192,11 @@ func TTestSimulation(mpc *hypocert.MPC, dataset *EncryptedDataset, debug bool) *
 	}
 }
 
-func TTestAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *EncryptedDataset, trans *MPCTranscript) (bool, time.Duration) {
+func TTestAuditSimulation(
+	pk *paillier.PublicKey,
+	fpprec int,
+	dataset *EncryptedDataset,
+	trans *MPCTranscript) (bool, time.Duration) {
 
 	verified := true
 
@@ -227,7 +250,9 @@ func TTestAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *Encrypted
 	sdX := pk.EAdd(sumsSdX...)
 	sdY := pk.EAdd(sumsSdY...)
 
-	denEncoded := pk.EncodeFixedPoint(big.NewFloat(1.0/float64(numRows-1)), fpprec)
+	denEncoded := pk.EncodeFixedPoint(
+		big.NewFloat(1.0/float64(numRows-1)),
+		fpprec)
 	sdXTmp := pk.ECMult(sdX, denEncoded)
 	sdYTmp := pk.ECMult(sdY, denEncoded)
 
@@ -263,7 +288,9 @@ func TTestAuditSimulation(pk *paillier.PublicKey, fpprec int, dataset *Encrypted
 
 	denominator := trans.Entries[numRows+4].CtOut[0]
 
-	df := pk.EncodeFixedPoint(big.NewFloat(1.0/float64(dataset.NumRows*dataset.NumRows-dataset.NumRows)), fpprec)
+	df := pk.EncodeFixedPoint(
+		big.NewFloat(1.0/float64(dataset.NumRows*dataset.NumRows-dataset.NumRows)),
+		fpprec)
 	denominatorTmp = pk.ECMult(denominator, df)
 
 	if denominatorTmp.C.Cmp(trans.Entries[numRows+5].CtIn[0].C) != 0 {
