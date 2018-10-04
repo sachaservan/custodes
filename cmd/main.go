@@ -72,6 +72,9 @@ func main() {
 	}
 	fmt.Println("done.")
 
+	filename_abalone := rootDir + "/cmd/datasets/abalone_height_vs_weight.csv"
+	filenameChiSq_abalone := rootDir + "/cmd/datasets/abalone_categorical.csv"
+
 	// filenames to use for the statistical test computations
 	filename1000 := rootDir + "/cmd/datasets/benchmark_1000.csv"
 	filename5000 := rootDir + "/cmd/datasets/benchmark_5000.csv"
@@ -94,6 +97,7 @@ func main() {
 			runTTestBechmarks(mpc, "", numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 		} else {
 			/* Student's t-test */
+			runTTestBechmarks(mpc, filename_abalone, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
@@ -108,6 +112,7 @@ func main() {
 		} else {
 
 			/* Pearson's correlation test */
+			runPearsonsBechmarks(mpc, filename_abalone, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runPearsonsBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runPearsonsBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runPearsonsBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
@@ -121,6 +126,8 @@ func main() {
 			runChiSqBechmarks(mpc, "", numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 
 		} else {
+			runChiSqBechmarks(mpc, filenameChiSq_abalone, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+
 			/* Chi-squared test */
 			runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runChiSqBechmarks(mpc, filenameChiSq1000_10, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
