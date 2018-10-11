@@ -69,7 +69,7 @@ func (mpc *MPC) ETruncPR(a *paillier.Ciphertext, k, m int) *paillier.Ciphertext 
 	big2m := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(m)), nil)
 	big2mInv := big.NewInt(0).ModInverse(big2m, mpc.Pk.N)
 
-	// get solved bits
+	// get random r \in [0, 2^m)
 	r := mpc.ERandom(big2m)
 
 	exp := big.NewInt(0).Exp(big2, big.NewInt(int64(mpc.S+k-m)), nil)
