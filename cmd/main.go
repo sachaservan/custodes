@@ -73,7 +73,7 @@ func main() {
 	fmt.Println("done.")
 
 	filename_abalone := rootDir + "/cmd/datasets/abalone_height_vs_weight.csv"
-	// filenameChiSq_abalone := rootDir + "/cmd/datasets/abalone_categorical.csv"
+	filenameChiSq_pittsburgh := rootDir + "/cmd/datasets/pittsburgh_bridges_categorical.csv"
 
 	// filenames to use for the statistical test computations
 	filename1000 := rootDir + "/cmd/datasets/benchmark_1000.csv"
@@ -126,7 +126,7 @@ func main() {
 			runChiSqBechmarks(mpc, "", numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 
 		} else {
-			// runChiSqBechmarks(mpc, filenameChiSq_abalone, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			runChiSqBechmarks(mpc, filenameChiSq_pittsburgh, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 
 			/* Chi-squared test */
 			runChiSqBechmarks(mpc, filenameChiSq1000_5, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
