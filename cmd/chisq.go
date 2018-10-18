@@ -28,7 +28,11 @@ func ChiSquaredTestSimulation(
 	// compute encrypted histogram
 	h := make([]*paillier.Ciphertext, encD.NumCols)
 	for i := 0; i < encD.NumCols; i++ {
-		h[i] = mpc.Pk.EAdd(eX[i]...)
+		categorySum := mpc.Pk.EncryptWithR(big.NewInt(0), big.NewInt(1))
+		for j := 0; j < encD.NumRows; j++ {
+			categorySum = mpc.Pk.EAdd(categorySum, eX[j][i])
+		}
+		h[i] = categorySum
 	}
 
 	// compute expected percentages per category
@@ -154,7 +158,11 @@ func ChiSquaredAuditSimulation(
 	// compute encrypted histogram
 	h := make([]*paillier.Ciphertext, encD.NumCols)
 	for i := 0; i < encD.NumCols; i++ {
-		h[i] = pk.EAdd(eX[i]...)
+		categorySum := pk.EncryptWithR(big.NewInt(0), big.NewInt(1))
+		for j := 0; j < encD.NumRows; j++ {
+			categorySum = pk.EAdd(categorySum, eX[j][i])
+		}
+		h[i] = categorySum
 	}
 
 	// compute expected percentages per category
