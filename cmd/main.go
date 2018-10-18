@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// number of cores
-	runtime.GOMAXPROCS(4 * numParties)
+	runtime.GOMAXPROCS(2 * numParties)
 
 	// system parameters
 	var params *hypocert.MPCKeyGenParams
