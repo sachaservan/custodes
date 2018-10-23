@@ -42,7 +42,7 @@ sns.set(context='paper', style={'axes.axisbelow': True,
     'ytick.major.size': 0.0,
     'ytick.minor.size': 0.0}, font_scale = 1.2)
 
-flatui = ['#28aad5', '#b24d94', '#38ae97' ,'#ec7545']
+flatui = ['#4C72B0', '#55A868', '#C44E52']
 
 
 def multiplication_line(show, size):
@@ -50,8 +50,8 @@ def multiplication_line(show, size):
     f, (ax1) = plt.subplots(1, 1, sharey=False, figsize=size)
     df = pd.read_csv('multiplication_times.csv')
     
-    plt.plot(df[df.latency == 1]["numparties"], df[df.latency == 1]["shares"],color=flatui[0],  linestyle='-', marker='o', label='LSS MPC')
-    plt.plot(df[df.latency == 1]["numparties"], df[df.latency == 1]["paillier"],color=flatui[1],linestyle='--', marker='s', label='Threshold-Paillier MPC')
+    plt.plot(df[df.latency == 1]["numparties"], df[df.latency == 1]["shares"],color=flatui[0],  linestyle='-', marker='o', label='LSS Multiplication')
+    plt.plot(df[df.latency == 1]["numparties"], df[df.latency == 1]["paillier"],color=flatui[1],linestyle='--', marker='s', label='Threshold-Paillier Multiplication')
     
     #plt.plot(df[df.latency == 50]["numparties"], df[df.latency == 50]["shares"],color=flatui[0],  linestyle='--', marker='o', label='LSS MPC, 50ms')
     #plt.plot(df[df.latency == 50]["numparties"], df[df.latency == 50]["paillier"],color=flatui[1],linestyle='--', marker='s', label='Threshold-Paillier MPC, 50ms')

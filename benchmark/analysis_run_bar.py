@@ -42,7 +42,7 @@ sns.set(context='paper', style={'axes.axisbelow': True,
     'ytick.major.size': 0.0,
     'ytick.minor.size': 0.0}, font_scale = 1.2)
 
-flatui = ['#28aad5', '#b24d94', '#38ae97' ,'#ec7545']
+flatui = ['#4C72B0', '#CCB974', '#55A868']
 
 
 def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
@@ -118,20 +118,20 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
                 tot_std = np.array(tottime[datasetSize][numParty][category]).std()
                 
                 
-                
+                #('computation', 'division', 'compare')
                 #current_in
                 total_width = width * len(numParties) + gap * (len(numParties) - 1)
                 pos = (idx - total_width / 2 + width / 2) + width * p + gap * p
                 
                 xLabels[datasetSize][category].append((pos, numParty))
                 
-                p1 = ax1.bar(pos, mean_comp, width, color=flatui[0])            
+                p1 = ax1.bar(pos, mean_comp, width, color=flatui[2], hatch='//')            
                                
                 if mean_compare != 0:
-                    p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, color=flatui[1], hatch='//')
-                    p3 = ax1.bar(pos, mean_compare, width, bottom=mean_div + mean_comp,  yerr=tot_std, color=flatui[2], hatch='\\')
+                    p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, color=flatui[0])
+                    p3 = ax1.bar(pos, mean_compare, width, bottom=mean_div + mean_comp,  yerr=tot_std, color=flatui[1], hatch='\\')
                 else:
-                    p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=tot_std, color=flatui[1], hatch='//')
+                    p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=tot_std, color=flatui[0])
           
     # label
     axis_to_data = ax1.transAxes + ax1.transData.inverted()
