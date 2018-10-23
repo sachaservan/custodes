@@ -45,78 +45,79 @@ sns.set(context='paper', style={'axes.axisbelow': True,
 flatui = ['#28aad5', '#b24d94', '#38ae97' ,'#ec7545']
 
 
-def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
+def runtime_bar(type, data, showCategoriesLabel, show, size):
     comptime = {}
     comparetime = {}
     divtime = {}
     
     numParties = []
-    datasetSizes = []
+    NumRowss = []
     categories = []
     
     #prefill
     for d in data:
-        if d['TestType'] == type and d['UseShares'] == shares:
-            if d['DatasetSize'] not in datasetSizes:
-                datasetSizes.append(d['DatasetSize'])
-                comptime[d['DatasetSize']] = {}
-                divtime[d['DatasetSize']] = {}
-                comparetime[d['DatasetSize']] = {}
+        if d['Test'] == type:
+            if d['NumRows'] not in NumRowss:
+                NumRowss.append(d['NumRows'])
+                comptime[d['NumRows']] = {}
+                divtime[d['NumRows']] = {}
+                comparetime[d['NumRows']] = {}
                 
-            if d['NumberOfParties'] not in numParties:
-                numParties.append(d['NumberOfParties'])
+            if d['NumParties'] not in numParties:
+                numParties.append(d['NumParties'])
                 
-            if d['NumberOfCategories'] not in categories:
-                categories.append(d['NumberOfCategories'])
+            if d['NumCols'] not in categories:
+                categories.append(d['NumCols'])
                 
-            if d['NumberOfParties'] not in comptime[d['DatasetSize']]:
-                comptime[d['DatasetSize']][d['NumberOfParties']] = {}
-                divtime[d['DatasetSize']][d['NumberOfParties']] = {} 
-                comparetime[d['DatasetSize']][d['NumberOfParties']] = {}                  
+            if d['NumParties'] not in comptime[d['NumRows']]:
+                comptime[d['NumRows']][d['NumParties']] = {}
+                divtime[d['NumRows']][d['NumParties']] = {} 
+                comparetime[d['NumRows']][d['NumParties']] = {}                  
 
-            if d['NumberOfCategories'] not in comptime[d['DatasetSize']][d['NumberOfParties']]:
-                comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []
-                divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []   
-                comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []   
+            if d['NumCols'] not in comptime[d['NumRows']][d['NumParties']]:
+                comptime[d['NumRows']][d['NumParties']][d['NumCols']] = []
+                divtime[d['NumRows']][d['NumParties']][d['NumCols']] = []   
+                comparetime[d['NumRows']][d['NumParties']][d['NumCols']] = []   
        
     for d in data:
-        if d['TestType'] == type and d['UseShares'] == shares:
-            comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComputationTime'])
-            divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['DivisionTime'])
-            comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComparisonTime'])
+        if d['Test'] == type:
+            comptime[d['NumRows']][d['NumParties']][d['NumCols']].append(d['ComputeRuntime'])
+            divtime[d['NumRows']][d['NumParties']][d['NumCols']].append(d['DivRuntime'])
+            #comparetime[d['NumRows']][d['NumParties']][d['NumCols']].append(d['ComparisonTime'])
+            comparetime[d['NumRows']][d['NumParties']][d['NumCols']].append(0)
             
-    print(numParties, datasetSizes)        
+    print(numParties, NumRowss)        
     width = 0.15    
     gap = 0.02
     f, (ax1) = plt.subplots(1, 1, sharey=False, figsize=size)
     numParties = sorted(numParties)
-    datasetSizes = sorted(datasetSizes)
+    NumRowss = sorted(NumRowss)
     categories = sorted(categories)
     
-    xIndices = len(numParties) * len(datasetSizes)  
+    xIndices = len(numParties) * len(NumRowss)  
     xLabels = {}
     p1 = None
     p2 = None
     p3 = None
     datasetLabelPrefix = '\n'
-    for ds, datasetSize in enumerate(datasetSizes): 
-        xLabels[datasetSize] = {} 
+    for ds, NumRows in enumerate(NumRowss): 
+        xLabels[NumRows] = {} 
         for c, category in enumerate(categories):  
-            xLabels[datasetSize][category] = []
+            xLabels[NumRows][category] = []
             idx = ds * len(categories) + c 
             
             for p, numParty in enumerate(numParties):        
-                mean_comp = np.array(comptime[datasetSize][numParty][category]).mean() 
-                std_comp = np.array(comptime[datasetSize][numParty][category]).std()
-                mean_div = np.array(divtime[datasetSize][numParty][category]).mean()
-                std_div = np.array(divtime[datasetSize][numParty][category]).std()
-                mean_compare = np.array(comparetime[datasetSize][numParty][category]).mean()
-                std_compare = np.array(comparetime[datasetSize][numParty][category]).std()
+                mean_comp = np.array(comptime[NumRows][numParty][category]).mean() 
+                std_comp = np.array(comptime[NumRows][numParty][category]).std()
+                mean_div = np.array(divtime[NumRows][numParty][category]).mean()
+                std_div = np.array(divtime[NumRows][numParty][category]).std()
+                mean_compare = np.array(comparetime[NumRows][numParty][category]).mean()
+                std_compare = np.array(comparetime[NumRows][numParty][category]).std()
                 #current_in
                 total_width = width * len(numParties) + gap * (len(numParties) - 1)
                 pos = (idx - total_width / 2 + width / 2) + width * p + gap * p
                 
-                xLabels[datasetSize][category].append((pos, numParty))
+                xLabels[NumRows][category].append((pos, numParty))
                 
                 p1 = ax1.bar(pos, mean_comp, width, yerr=std_comp, color=flatui[0])            
                 p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=std_div, color=flatui[1], hatch='//')
@@ -188,9 +189,9 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     else:
         plt.legend((p1[0], p2[0]), ('computation', 'division'))
     
-    mode = 'noshares'
-    if shares:
-        mode = 'shares'
+    mode = 'shares'
+    #if shares:
+    #    mode = 'shares'
     f.savefig('fig/runtime_' + type.lower() + '_' + mode + '.pdf', bbox_inches='tight')
     
     
@@ -204,17 +205,17 @@ if __name__== "__main__":
     show = True
     
     all_runs = []
-    for filename in glob.glob("./res/*.json"):
+    for filename in glob.glob("../results/*.json"):
         with open(filename) as f:
             data = json.load(f)
             all_runs.append(data)
-            
-    for d in all_runs:
-        if d['TestType'] == 'TTEST' and d['UseShares'] == True and d['NumberOfParties'] == 16 and d['DatasetSize'] == 10000:
-            print (d['DivisionTime'])
     
-    runtime_bar('CHI2', all_runs, True, True, show, (14, 4))    
-    runtime_bar('TTEST', all_runs, True, False, show, (6, 4))
-    runtime_bar('PEARSON', all_runs, True, False, show, (6, 4))
+    for d in all_runs:
+        if d['Test'] == 'T-Test' and d['NumParties'] == 16 and d['NumRows'] == 10000:
+            print (d['DivRuntime'])
+    
+    runtime_bar('Chi-Squared', all_runs, True, show, (14, 4))    
+    runtime_bar('T-Test', all_runs, False, show, (6, 4))
+    runtime_bar('Pearson', all_runs, False, show, (6, 4))
         
         

@@ -11,15 +11,15 @@ for index, row in df.iterrows():
     
     stat_hypo = row['PValue']
     data = datasets[row['DatasetSize']]
-    if row['TestType'] == 'TTEST':
+    if row['Test'] == 'T-Test':
         stat_comp, pvalue_comp = stats.ttest_ind(data['A'], data['B'])
-        print(row['TestType'], row['DatasetSize'], stat_comp, stat_hypo)
+        print(row['Test'], row['DatasetSize'], stat_comp, stat_hypo)
 
-    elif row['TestType'] == 'PEARSON':
+    elif row['Test'] == 'Pearson':
         stat_comp, pvalue_comp = stats.pearsonr(data['A'], data['B'])
-        print(row['TestType'], row['DatasetSize'], stat_comp, stat_hypo)
+        print(row['Test'], row['DatasetSize'], stat_comp, stat_hypo)
         
-    elif row['TestType'] == 'CHI2':
+    elif row['Test'] == 'Chi-Squared':
         data = pd.read_csv('benchmark_chisq_' + str(row['DatasetSize']) + '_' + str(row['NumberOfCategories']) + '.csv.', names=range(row['NumberOfCategories']))
         histoA = []
         #print(len(data.columns), row['NumberOfCategories'])
@@ -29,8 +29,8 @@ for index, row in df.iterrows():
         s = np.array(histoA).sum()
         histoB = [s / len(histoA) for x in histoA]
         stat_comp, pvalue_comp = stats.chisquare(histoA, f_exp=histoB)
-        print(row['TestType'], row['DatasetSize'], stat_comp, stat_hypo)
+        print(row['Test'], row['DatasetSize'], stat_comp, stat_hypo)
         
         #        print (i)
         #stat_comp, pvalue_comp = stats.pearsonr(data['A'], data['B'])
-        #print(row['TestType'], row['DatasetSize'], stat_comp, stat_hypo)
+        #print(row['Test'], row['DatasetSize'], stat_comp, stat_hypo)

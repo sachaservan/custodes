@@ -57,7 +57,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     
     #prefill
     for d in data:
-        if d['TestType'] == type and d['UseShares'] == shares:
+        if d['Test'] == type and d['UseShares'] == shares:
             if d['DatasetSize'] not in datasetSizes:
                 datasetSizes.append(d['DatasetSize'])
                 comptime[d['DatasetSize']] = {}
@@ -65,30 +65,30 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
                 tottime[d['DatasetSize']] = {}
                 comparetime[d['DatasetSize']] = {}
                 
-            if d['NumberOfParties'] not in numParties:
-                numParties.append(d['NumberOfParties'])
+            if d['NumParties'] not in numParties:
+                numParties.append(d['NumParties'])
                 
             if d['NumberOfCategories'] not in categories:
                 categories.append(d['NumberOfCategories'])
                 
-            if d['NumberOfParties'] not in comptime[d['DatasetSize']]:
-                comptime[d['DatasetSize']][d['NumberOfParties']] = {}
-                divtime[d['DatasetSize']][d['NumberOfParties']] = {} 
-                tottime[d['DatasetSize']][d['NumberOfParties']] = {} 
-                comparetime[d['DatasetSize']][d['NumberOfParties']] = {}                  
+            if d['NumParties'] not in comptime[d['DatasetSize']]:
+                comptime[d['DatasetSize']][d['NumParties']] = {}
+                divtime[d['DatasetSize']][d['NumParties']] = {} 
+                tottime[d['DatasetSize']][d['NumParties']] = {} 
+                comparetime[d['DatasetSize']][d['NumParties']] = {}                  
 
-            if d['NumberOfCategories'] not in comptime[d['DatasetSize']][d['NumberOfParties']]:
-                comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []
-                divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = [] 
-                tottime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []                   
-                comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []   
+            if d['NumberOfCategories'] not in comptime[d['DatasetSize']][d['NumParties']]:
+                comptime[d['DatasetSize']][d['NumParties']][d['NumberOfCategories']] = []
+                divtime[d['DatasetSize']][d['NumParties']][d['NumberOfCategories']] = [] 
+                tottime[d['DatasetSize']][d['NumParties']][d['NumberOfCategories']] = []                   
+                comparetime[d['DatasetSize']][d['NumParties']][d['NumberOfCategories']] = []   
        
     for d in data:
-        if d['TestType'] == type and d['UseShares'] == shares:
-            comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComputationTime'])
-            divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['DivisionTime'])
-            tottime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['TotalTime'])
-            comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComparisonTime'])
+        if d['Test'] == type and d['UseShares'] == shares:
+            comptime[d['DatasetSize']][d['NumParties']][d['NumberOfCategories']].append(d['ComputeRuntime'])
+            divtime[d['DatasetSize']][d['NumParties']][d['NumberOfCategories']].append(d['DivRuntime'])
+            tottime[d['DatasetSize']][d['NumParties']][d['NumberOfCategories']].append(d['TotalRuntime'])
+            comparetime[d['DatasetSize']][d['NumParties']][d['NumberOfCategories']].append(d['ComparisonTime'])
                    
     width = 0.15    
     gap = 0.02
@@ -220,18 +220,18 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
 if __name__== "__main__":
     show = True
     data_csv = open('data.csv', 'w')
-    data_csv.write('TestType' + ',' + 'UseShares' + ',' + 'NumberOfParties' + ',' + 'DatasetSize' + ',' +  'PValue'  + ',' +'TotalTime' + ',' + 'NumberOfCategories\n')
+    data_csv.write('Test' + ',' + 'UseShares' + ',' + 'NumParties' + ',' + 'DatasetSize' + ',' +  'PValue'  + ',' +'TotalRuntime' + ',' + 'NumberOfCategories\n')
     
     all_runs = []
     for filename in glob.glob("./res/*.json"):
         with open(filename) as f:
             data = json.load(f)
             all_runs.append(data)
-            data_csv.write(str(data['TestType']) + ',' + str(data['UseShares']) + ',' + str(data['NumberOfParties']) + ',' + str(data['DatasetSize']) + ',' + str(data['PValue']) + ',' + str(data['TotalTime']) + ',' + str(data['NumberOfCategories']) + '\n')
+            data_csv.write(str(data['Test']) + ',' + str(data['UseShares']) + ',' + str(data['NumParties']) + ',' + str(data['DatasetSize']) + ',' + str(data['PValue']) + ',' + str(data['TotalRuntime']) + ',' + str(data['NumberOfCategories']) + '\n')
             
     
-    runtime_bar('CHI2', all_runs, True, True, show, (14, 4))    
-    runtime_bar('TTEST', all_runs, True, False, show, (6, 4))
-    runtime_bar('PEARSON', all_runs, True, False, show, (6, 4))
+    runtime_bar('Chi-Squared', all_runs, True, True, show, (14, 4))    
+    runtime_bar('T-Test', all_runs, True, False, show, (6, 4))
+    runtime_bar('Pearson', all_runs, True, False, show, (6, 4))
         
         
