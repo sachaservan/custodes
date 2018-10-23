@@ -220,18 +220,19 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
 if __name__== "__main__":
     show = True
     data_csv = open('data.csv', 'w')
-    data_csv.write('Test' + ',' + 'UseShares' + ',' + 'NumParties' + ',' + 'DatasetSize' + ',' +  'PValue'  + ',' +'TotalRuntime' + ',' + 'NumberOfCategories\n')
+    data_csv.write('Test' + ',' + 'NumParties' + ',' + 'NumRows' + ',' +  'Value'  + ',' +  'TotalRuntime' + ',' + 'AuditRuntime' + ','  +'SetupTime' + ',' + 'NumCols\n')
     
     all_runs = []
-    for filename in glob.glob("./res/*.json"):
+    for filename in glob.glob("../results/*.json"):
         with open(filename) as f:
             data = json.load(f)
             all_runs.append(data)
-            data_csv.write(str(data['Test']) + ',' + str(data['UseShares']) + ',' + str(data['NumParties']) + ',' + str(data['DatasetSize']) + ',' + str(data['PValue']) + ',' + str(data['TotalRuntime']) + ',' + str(data['NumberOfCategories']) + '\n')
+            data_csv.write(str(data['Test']) + ',' + str(data['NumParties']) + ',' + str(data['NumRows']) + ',' + str(data['Value']) + ',' 
+                + str(data['TotalRuntime']) + ',' + str(data['SetupTime']) + ',' + str(data['AuditRuntime']) + ',' + str(data['NumCols']) + '\n')
             
     
-    runtime_bar('Chi-Squared', all_runs, True, True, show, (14, 4))    
-    runtime_bar('T-Test', all_runs, True, False, show, (6, 4))
-    runtime_bar('Pearson', all_runs, True, False, show, (6, 4))
+    #runtime_bar('Chi-Squared', all_runs, True, True, show, (14, 4))    
+    #runtime_bar('T-Test', all_runs, True, False, show, (6, 4))
+    #runtime_bar('Pearson', all_runs, True, False, show, (6, 4))
         
         
