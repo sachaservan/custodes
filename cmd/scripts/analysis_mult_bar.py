@@ -119,10 +119,10 @@ def runtime_bar(type, data, showCategoriesLabel, show, size):
                 
                 xLabels[NumRows][category].append((pos, numParty))
                 
-                p1 = ax1.bar(pos, mean_comp, width, yerr=std_comp, color=flatui[0])            
-                p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=std_div, color=flatui[1], hatch='//')
+                p1 = ax1.bar(pos, mean_comp, width, yerr=std_comp, color=flatui[1])            
+                p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=std_div, color=flatui[3], hatch='//')
                 if mean_compare != 0:
-                    p3 = ax1.bar(pos, mean_compare, width, bottom=mean_div + mean_comp, yerr=std_compare, color=flatui[3], hatch='\\')
+                    p3 = ax1.bar(pos, mean_compare, width, bottom=mean_div + mean_comp, yerr=std_compare, color=flatui[1], hatch='\\')
           
     # label
     axis_to_data = ax1.transAxes + ax1.transData.inverted()
@@ -185,9 +185,9 @@ def runtime_bar(type, data, showCategoriesLabel, show, size):
         step = 5 * 60
     plt.yticks(range(0, int(ymax), step))
     if p3 is not None:
-        plt.legend((p1[0], p2[0], p3[0]), ('computation', 'division', 'compare'))
+        plt.legend((p1[0], p2[0], p3[0]), ('division', 'computation', 'compare'))
     else:
-        plt.legend((p1[0], p2[0]), ('computation', 'division'))
+        plt.legend((p1[0], p2[0]), ('division', 'computation'))
     
     mode = 'shares'
     #if shares:
