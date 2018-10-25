@@ -1,14 +1,14 @@
 {
 	"Test": "Pearson",
-	"Value": "0.019742726794516528",
-	"TotalRuntime": 28.623702867,
-	"SetupTime": 3.022400844,
-	"ComputeRuntime": 11.944938414,
-	"DivRuntime": 16.678764686,
-	"AuditRuntime": 0.361882013,
+	"Value": "0.0197427032080297",
+	"TotalRuntime": 27.709097415,
+	"SetupTime": 3.175723086,
+	"ComputeRuntime": 9.155050154,
+	"DivRuntime": 18.554047692,
+	"AuditRuntime": 0.351921683,
 	"NumParties": 5,
 	"NumRows": 5000,
 	"NumCols": 2,
-	"NumSharesCreated": 69236,
+	"NumSharesCreated": 69237,
 	"RunId": 4
 }

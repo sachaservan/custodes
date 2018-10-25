@@ -185,7 +185,7 @@ def runtime_bar(type, data, showCategoriesLabel, show, size):
     #formatter = matplotlib.ticker.FuncFormatter(lambda ms, x: time.strftime('%M:%S', time.gmtime(ms)))
     #ax1.yaxis.set_major_formatter(formatter)
    
-    plt.legend((p1[0], p2[0]), ('computation', 'division'))
+    plt.legend((p1[0], p2[0]), ('local + interactive computations', 'division computation'))
     plt.setp(ax1.get_xticklabels(), color=".15")
     plt.setp(ax1.get_yticklabels(), color=".15")
     
