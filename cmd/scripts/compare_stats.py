@@ -11,7 +11,9 @@ datasets = {4177: pd.read_csv('../datasets/abalone_height_vs_weight.csv', names 
             10000: pd.read_csv('../datasets/benchmark_10000.csv', names =['A', 'B'])}
 
 df = pd.read_csv('data.csv')
-sums = {'TotalRuntime': [], 'SetupTime' : [], 'AuditRuntime': [], 'AbsoluteError' : {'T-Test': [], 'Pearson': [], 'Chi-Squared': []}}
+sums = {'TotalRuntime': [], 'SetupTime' : [], 'AuditRuntime': [], 
+    'AbsoluteError' : {'T-Test': [], 'Pearson': [], 'Chi-Squared': []}, 
+    'TotalRuntimePerTest' : {'T-Test': [], 'Pearson': [], 'Chi-Squared': []}}
 
 def _betai(a, b, x):
     x = np.asarray(x)
@@ -20,9 +22,11 @@ def _betai(a, b, x):
 
 for index, row in df.iterrows():
     for k in sums:
-        if k != 'AbsoluteError':
+        if k != 'AbsoluteError' and k != 'TotalRuntimePerTest':
             sums[k].append(row[k])
-    
+
+    sums['TotalRuntimePerTest'][row['Test']].append(row['TotalRuntime'])
+
     stat_hypocert = row['Value']
     data = datasets[row['NumRows']]
     if row['Test'] == 'T-Test':
@@ -77,8 +81,8 @@ for index, row in df.iterrows():
 
 print()
 for k in sums:
-    if k != 'AbsoluteError':
+    if k != 'AbsoluteError' and k != 'TotalRuntimePerTest':
         print(k, ': mean =', np.mean(sums[k]), 'std =', np.std(sums[k]))
     else:
         for j in sums[k]:
-            print(k, j, ': mean =', np.mean(sums[k][j]), 'std =', np.std(sums[k][j]))
+            print(k, j, ': mean =', np.mean(sums[k][j]), 'std =', np.std(sums[k][j]), 'min =', np.min(sums[k][j]), 'max =', np.max(sums[k][j]))
