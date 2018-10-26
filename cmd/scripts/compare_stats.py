@@ -44,7 +44,8 @@ for index, row in df.iterrows():
 
         p_value_hypo = distributions.t.sf(np.abs(stat_hypocert), df) * 2
 
-        sums['AbsoluteError'][row['Test']].append(abs(pvalue_comp - p_value_hypo))
+        #sums['AbsoluteError'][row['Test']].append(abs(pvalue_comp - p_value_hypo))
+        sums['AbsoluteError'][row['Test']].append(abs(stat_hypocert - stat_comp))
         print(row['Test'], row['NumRows'], abs(pvalue_comp), p_value_hypo)
 
     elif row['Test'] == 'Pearson':
@@ -53,7 +54,8 @@ for index, row in df.iterrows():
         t_squared = stat_hypocert**2 * (df / ((1.0 - stat_hypocert) * (1.0 + stat_hypocert)))
         p_value_hypo = _betai(0.5*df, 0.5, df/(df+t_squared))
 
-        sums['AbsoluteError'][row['Test']].append(abs(pvalue_comp - p_value_hypo))
+        #sums['AbsoluteError'][row['Test']].append(abs(pvalue_comp - p_value_hypo))
+        sums['AbsoluteError'][row['Test']].append(abs(stat_hypocert - stat_comp))
         print(row['Test'], row['NumRows'], abs(pvalue_comp), p_value_hypo)
         
     elif row['Test'] == 'Chi-Squared':
@@ -72,7 +74,8 @@ for index, row in df.iterrows():
 
         p_value_hypo = distributions.chi2.sf(stat_hypocert, row['NumCols'] - 1 - 0)
 
-        sums['AbsoluteError'][row['Test']].append(abs(pvalue_comp - p_value_hypo))
+        #sums['AbsoluteError'][row['Test']].append(abs(pvalue_comp - p_value_hypo))
+        sums['AbsoluteError'][row['Test']].append(abs(stat_hypocert - stat_comp))
         print(row['Test'], row['NumRows'], abs(pvalue_comp), p_value_hypo)
         
         #        print (i)

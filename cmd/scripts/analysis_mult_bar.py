@@ -54,7 +54,7 @@ sortorder = { 'T-Test'  : {1000 : '1', 5000: '2', 10000: '3', 4177: '0'},
               'Chi-Squared' : {1000 : '1', 5000: '2', 10000: '3', 108: '0'}}
 
 
-def runtime_bar(type, data, showCategoriesLabel, show, size):
+def runtime_bar(type, data, showCategoriesLabel, show, size, fn = None):
     comptime = {}
     divtime = {}
     
@@ -105,7 +105,7 @@ def runtime_bar(type, data, showCategoriesLabel, show, size):
     ccc = 0
     for ds, NumRows in enumerate(NumRowss): 
         xLabels[NumRows] = {} 
-        for c, category in enumerate(categories[NumRows]):   
+        for c, category in enumerate(sorted(categories[NumRows])):   
             xLabels[NumRows][category] = []
             idx = ccc #ds * len(categories[NumRows]) + c 
             ccc = ccc + 1
@@ -181,6 +181,8 @@ def runtime_bar(type, data, showCategoriesLabel, show, size):
     f.subplots_adjust(bottom=0.3)
     plt.xticks([])
     ax1.xaxis.grid(False)
+    ymin, ymax = ax1.get_ylim()
+    ax1.set_ylim([ymin, ymax * 1.3])
     ax1.set_ylabel('time in seconds')
     #formatter = matplotlib.ticker.FuncFormatter(lambda ms, x: time.strftime('%M:%S', time.gmtime(ms)))
     #ax1.yaxis.set_major_formatter(formatter)
@@ -192,7 +194,10 @@ def runtime_bar(type, data, showCategoriesLabel, show, size):
     mode = 'shares'
     #if shares:
     #    mode = 'shares'
-    f.savefig('fig/runtime_' + type.lower() + '_' + mode + '.pdf', bbox_inches='tight')
+    if fn is None:
+        f.savefig('fig/runtime_' + type.lower() + '_' + mode + '.pdf', bbox_inches='tight')
+    else:
+         f.savefig('fig/runtime_' + fn + '.pdf', bbox_inches='tight')
     
     
     if show:
@@ -217,5 +222,9 @@ if __name__== "__main__":
     runtime_bar('Chi-Squared', all_runs, True, show, (14, 4))    
     runtime_bar('T-Test', all_runs, False, show, (6, 4))
     runtime_bar('Pearson', all_runs, False, show, (6, 4))
+
+    runtime_bar('Chi-Squared', [x for x in all_runs if x['NumCols'] == 5 or x['NumCols'] == 4], True, show, (6, 4), 'chi_5')   
+    runtime_bar('Chi-Squared', [x for x in all_runs if x['NumCols'] == 10], True, show, (6, 4), 'chi_10')  
+    runtime_bar('Chi-Squared', [x for x in all_runs if x['NumCols'] == 20], True, show, (6, 4), 'chi_20')        
         
         
