@@ -158,7 +158,7 @@ func printWelcome() {
 	fmt.Println("			Certified Hypothesis Testing")
 	fmt.Println("+========================================================================+")
 	fmt.Println("| DISCLAIMER: this software is intended for simulation                   |")
-	fmt.Println("|             and nd proof-of-concept purposes only.                     |")
+	fmt.Println("|             and proof-of-concept purposes only.                        |")
 	fmt.Println("+========================================================================+")
 	fmt.Println()
 }
