@@ -48,7 +48,7 @@ func NewMPCKeyGen(params *MPCKeyGenParams) (*MPC, error) {
 	}
 
 	//shareModulusBits := 4*params.MessageBits + params.FPPrecisionBits + params.SecurityBits + nu + 1
-	secretSharePrime, err := rand.Prime(rand.Reader, 1024)
+	secretSharePrime, err := rand.Prime(rand.Reader, params.KeyBits)
 
 	tkh, err := paillier.GetThresholdKeyGenerator(params.KeyBits, params.NumParties, params.Threshold, rand.Reader)
 	if err != nil {

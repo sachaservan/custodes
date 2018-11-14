@@ -68,7 +68,9 @@ func (mpc *MPC) ReconstructShare(values []*big.Int) *big.Int {
 		s.Add(s, values[i])
 	}
 
-	return s.Mod(s, mpc.P)
+	s.Mod(s, mpc.P)
+
+	return s
 }
 func (mpc *MPC) CreateShares(value *big.Int) *party.Share {
 
@@ -226,7 +228,7 @@ func (mpc *MPC) FPDivision(a, b *party.Share) *party.Share {
 		}
 	}
 
-	return mpc.TruncPR(y, 2*mpc.K, mpc.K/2-mpc.FPPrecBits)
+	return y
 }
 
 func (mpc *MPC) initReciprocal(b *party.Share) *party.Share {
@@ -247,6 +249,66 @@ func (mpc *MPC) initReciprocal(b *party.Share) *party.Share {
 	t := mpc.TruncPR(w, 2*mpc.K, mpc.K)
 
 	return t
+}
+
+// FPDivision return the approximate result of [a/b]
+func (mpc *MPC) FPSqrtReciprocal(a *party.Share) *party.Share {
+
+	// init goldschmidt constants
+	theta := int(math.Ceil(math.Log2(float64(mpc.FPPrecBits))))
+
+	// get initial reciprocal  approximation
+	b := mpc.CopyShare(a)
+	precPow := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.K/2-mpc.FPPrecBits)), nil)
+
+	b = mpc.MultC(b, precPow)
+	y := mpc.initSquareRoot(a)
+	z := mpc.CopyShare(y)
+
+	for i := 0; i < theta; i++ {
+
+		// compute y^2
+		y2 := mpc.Mult(y, y)
+		y2 = mpc.TruncPR(y2, 2*mpc.K, mpc.K/2)
+
+		b = mpc.Mult(b, y2)
+		b = mpc.TruncPR(b, 2*mpc.K, mpc.K/2)
+
+		three := mpc.CreateShares(mpc.EncodeFixedPoint(big.NewFloat(3.0), mpc.K/2))
+		half := mpc.EncodeFixedPoint(big.NewFloat(0.5), mpc.K/2)
+
+		y = mpc.Sub(three, b)
+		y = mpc.MultC(y, half)
+		y = mpc.TruncPR(y, 2*mpc.K, mpc.K/2)
+
+		z = mpc.Mult(z, y)
+		z = mpc.TruncPR(z, 2*mpc.K, mpc.K/2)
+
+	}
+
+	return z
+}
+
+func (mpc *MPC) initSquareRoot(a *party.Share) *party.Share {
+
+	bitsa := mpc.ReverseBits(mpc.BitsDec(a, mpc.K))
+	ybits := mpc.ReverseBits(mpc.BitsPrefixOR(bitsa))
+
+	for i := 0; i < mpc.K-1; i++ {
+		ybits[i] = mpc.Sub(ybits[i], ybits[i+1])
+	}
+
+	v := mpc.CreateShares(big.NewInt(0))
+
+	aprx := mpc.EncodeFixedPoint(big.NewFloat(1.0), mpc.K/2)
+
+	for i := 0; i < mpc.K; i++ {
+		t := mpc.MultC(ybits[i], aprx)
+		v = mpc.Add(v, t)
+		aprx = mpc.EncodeFixedPoint(big.NewFloat(1.0/math.Sqrt(math.Pow(2, float64(i-mpc.FPPrecBits+1)))), mpc.K/2)
+	}
+
+	return v
 }
 
 func (mpc *MPC) TruncPR(a *party.Share, k, m int) *party.Share {
@@ -279,4 +341,22 @@ func (mpc *MPC) TruncPR(a *party.Share, k, m int) *party.Share {
 	res = mpc.MultC(res, big2mInv)
 
 	return res
+}
+
+func (mpc *MPC) SignBit(a *party.Share) *party.Share {
+	big2K := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.K-1)), nil)
+
+	shiftShare := mpc.CreateShares(big2K)
+	pos := mpc.Add(a, shiftShare)
+	aBits := mpc.BitsDec(pos, mpc.K)
+	thresholdBits := mpc.BitsBigEndian(big2K, mpc.K)
+	signbit := mpc.BitsLT(aBits, thresholdBits)
+	return signbit
+
+	// 	fmt.Println("[DEBUG] SHIFTED: " + mpc.RevealShare(pos).String())
+	// 	fmt.Println("[DEBUG] BITS: ")
+	// 	for i := len(aBits) - 1; i >= 0; i-- {
+	// 		fmt.Print(mpc.RevealShare(aBits[i]))
+	// 	}
+	// 	fmt.Println()
 }
