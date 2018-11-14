@@ -18,8 +18,6 @@ func TTestSimulation(
 	eX := dataset.Data[0]
 	eY := dataset.Data[1]
 
-	trans := newMPCTranscript(dataset.NumRows + 6)
-
 	startTime := time.Now()
 	invNumRows := big.NewFloat(1.0 / float64(dataset.NumRows))
 	invNumRowsEncoded := mpc.Pk.EncodeFixedPoint(invNumRows, mpc.FPPrecBits)
@@ -31,15 +29,8 @@ func TTestSimulation(
 	meanXTmp := mpc.Pk.ECMult(sumX, invNumRowsEncoded)
 	meanYTmp := mpc.Pk.ECMult(sumY, invNumRowsEncoded)
 
-	meanX := mpc.ETruncPR(meanXTmp, mpc.K, mpc.FPPrecBits)
-	meanY := mpc.ETruncPR(meanYTmp, mpc.K, mpc.FPPrecBits)
-
-	// entry #1 for TruncPR interactive protocol
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: ETruncPR,
-		CtIn:     []*paillier.Ciphertext{meanXTmp, meanYTmp},
-		CtOut:    []*paillier.Ciphertext{meanX, meanY},
-	})
+	meanX := mpc.ETruncPR(meanXTmp, 2*mpc.K, mpc.FPPrecBits)
+	meanY := mpc.ETruncPR(meanYTmp, 2*mpc.K, mpc.FPPrecBits)
 
 	if debug {
 		// sanity check
@@ -47,98 +38,41 @@ func TTestSimulation(
 		fmt.Printf("[DEBUG] MEAN Y: %s\n", mpc.RevealFP(meanY, mpc.FPPrecBits).String())
 	}
 
-	sumsSdX := make([]*paillier.Ciphertext, dataset.NumRows)
-	sumsSdY := make([]*paillier.Ciphertext, dataset.NumRows)
+	sumdX := make([]*paillier.Ciphertext, dataset.NumRows)
+	sumdY := make([]*paillier.Ciphertext, dataset.NumRows)
 
 	var wg sync.WaitGroup
 	wg.Add(dataset.NumRows)
 	for i := 0; i < dataset.NumRows; i++ {
 		go func(i int) {
 			defer wg.Done()
-			sdx := mpc.Pk.ESub(eX[i], meanX)
-			sdy := mpc.Pk.ESub(eY[i], meanY)
-			sumsSdX[i] = mpc.EMult(sdx, sdx)
-			sumsSdY[i] = mpc.EMult(sdy, sdy)
+			dx := mpc.Pk.ESub(eX[i], meanX)
+			dy := mpc.Pk.ESub(eY[i], meanY)
+			sumdX[i] = mpc.EMult(dx, dx)
+			sumdY[i] = mpc.EMult(dy, dy)
 
-			// entry #2 for Mult interactive protocol
-			trans.setEntryAtIndex(&MPCTranscriptEntry{
-				Protocol: EMult,
-				CtIn:     []*paillier.Ciphertext{sdx, sdy},
-				CtOut:    []*paillier.Ciphertext{sumsSdX[i], sumsSdY[i]},
-			}, i+1)
 		}(i)
 	}
 	wg.Wait()
 
-	trans.Next = dataset.NumRows + 1
-
 	// compute the standard deviation
-	sdX := mpc.Pk.EAdd(sumsSdX...)
-	sdY := mpc.Pk.EAdd(sumsSdY...)
+	dXtmp := mpc.Pk.EAdd(sumdX...)
+	dYtmp := mpc.Pk.EAdd(sumdY...)
 
-	denEncoded := mpc.Pk.EncodeFixedPoint(
-		big.NewFloat(1.0/float64(dataset.NumRows-1)),
-		mpc.FPPrecBits)
+	dX := mpc.ETruncPR(dXtmp, 2*mpc.K, mpc.FPPrecBits)
+	dY := mpc.ETruncPR(dYtmp, 2*mpc.K, mpc.FPPrecBits)
 
-	sdXTmp := mpc.Pk.ECMult(sdX, denEncoded)
-	sdYTmp := mpc.Pk.ECMult(sdY, denEncoded)
+	// compute numerator
+	numerator := mpc.Pk.ESub(meanX, meanY)
 
-	sdX = mpc.ETruncPR(sdXTmp, mpc.K, mpc.FPPrecBits)
-	sdY = mpc.ETruncPR(sdYTmp, mpc.K, mpc.FPPrecBits)
-
-	// entry #3 for TruncPR interactive protocol
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: ETruncPR,
-		CtIn:     []*paillier.Ciphertext{sdXTmp, sdYTmp},
-		CtOut:    []*paillier.Ciphertext{sdX, sdY},
-	})
-
-	numeratorTmp := mpc.Pk.ESub(meanX, meanY)
-	numerator := mpc.EMult(numeratorTmp, numeratorTmp)
-
-	// entry #4 for Mult interactive protocol
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: EMult,
-		CtIn:     []*paillier.Ciphertext{numeratorTmp},
-		CtOut:    []*paillier.Ciphertext{numerator},
-	})
-
-	numeratorTmp = mpc.ETruncPR(numerator, mpc.K, mpc.FPPrecBits)
-
-	// entry #5 for TruncPR interactive protocol
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: ETruncPR,
-		CtIn:     []*paillier.Ciphertext{numerator},
-		CtOut:    []*paillier.Ciphertext{numeratorTmp},
-	})
-
-	numerator = numeratorTmp
-
-	tx := mpc.Pk.ESub(mpc.Pk.ECMult(sdX, big.NewInt(int64(dataset.NumRows))), sdX)
-	ty := mpc.Pk.ESub(mpc.Pk.ECMult(sdY, big.NewInt(int64(dataset.NumRows))), sdY)
-	denominatorTmp := mpc.Pk.EAdd(tx, ty)
-	denominator := mpc.ETruncPR(denominatorTmp, mpc.K, mpc.FPPrecBits)
-
-	// entry #6 for TruncPR interactive protocol
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: ETruncPR,
-		CtIn:     []*paillier.Ciphertext{denominatorTmp},
-		CtOut:    []*paillier.Ciphertext{denominator},
-	})
+	// compute denominator
+	denominatorTmp := mpc.Pk.EAdd(dX, dY)
 
 	df := mpc.Pk.EncodeFixedPoint(
 		big.NewFloat(1.0/float64(dataset.NumRows*dataset.NumRows-dataset.NumRows)),
 		mpc.FPPrecBits)
-	denominatorTmp = mpc.Pk.ECMult(denominator, df)
-
-	denominator = mpc.ETruncPR(denominatorTmp, mpc.K, mpc.FPPrecBits)
-
-	// entry #7 for TruncPR interactive protocol
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: ETruncPR,
-		CtIn:     []*paillier.Ciphertext{denominatorTmp},
-		CtOut:    []*paillier.Ciphertext{denominator},
-	})
+	denominatorTmp = mpc.Pk.ECMult(denominatorTmp, df)
+	denominator := mpc.ETruncPR(denominatorTmp, 2*mpc.K, mpc.FPPrecBits)
 
 	if debug {
 		// sanity check
@@ -152,6 +86,10 @@ func TTestSimulation(
 	numeratorShare := mpc.PaillierToShare(numerator)
 	denominatorShare := mpc.PaillierToShare(denominator)
 
+	numerator = mpc.EMult(numerator, numerator)
+	fmt.Printf("[DEBUG] NUMERATOR SQ (abs): %s\n",
+		new(big.Int).Sqrt(mpc.RevealInt(numerator)).String())
+
 	if debug {
 		// sanity check
 		fmt.Printf("[DEBUG] NUMERATOR (share): %s\n",
@@ -163,13 +101,35 @@ func TTestSimulation(
 	// end paillier benchmark
 	endTimePaillier := time.Now()
 
-	res := mpc.FPDivision(numeratorShare, denominatorShare)
-	tstat2 := mpc.RevealShareFP(res, mpc.FPPrecBits)
+	signbit := mpc.SignBit(numeratorShare)
+
+	// reveal the sign bit since it's made public at the end regardless
+	isNegative := mpc.RevealShare(signbit).Int64()
+
+	if isNegative == 1 {
+		numeratorShare = mpc.MultC(numeratorShare, new(big.Int).Sub(mpc.P, big.NewInt(1)))
+
+		if debug {
+			fmt.Printf("[DEBUG] NUMERATOR (abs): %s\n",
+				mpc.RevealShare(numeratorShare).String())
+		}
+	}
+
+	rcpr := mpc.FPSqrtReciprocal(denominatorShare)
+
+	precAdjust := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.K/2-mpc.FPPrecBits)), nil)
+	numeratorShare = mpc.MultC(numeratorShare, precAdjust)
+
+	res := mpc.Mult(numeratorShare, rcpr)
+
+	tstat := mpc.RevealShareFP(res, mpc.K)
+
+	if isNegative == 1 {
+		tstat.Mul(tstat, big.NewFloat(-1))
+	}
 
 	// end division benchmark
 	endTime := time.Now()
-
-	tstat := tstat2.Sqrt(tstat2)
 
 	if debug {
 		fmt.Printf("[DEBUG] T-STATISTIC, t = %f\n", tstat)
@@ -188,116 +148,5 @@ func TTestSimulation(
 		ComputeRuntime:   paillierTime,
 		DivRuntime:       divTime,
 		NumSharesCreated: mpc.DeleteAllShares(),
-		Transcript:       trans,
 	}
-}
-
-func TTestAuditSimulation(
-	pk *paillier.PublicKey,
-	fpprec int,
-	dataset *EncryptedDataset,
-	trans *MPCTranscript) (bool, time.Duration) {
-
-	verified := true
-
-	eX := dataset.Data[0]
-	eY := dataset.Data[1]
-
-	numRows := len(eX)
-
-	startTime := time.Now()
-	invNumRows := big.NewFloat(1.0 / float64(numRows))
-	invNumRowsEncoded := pk.EncodeFixedPoint(invNumRows, fpprec)
-
-	// sum of the squares
-	sumX := pk.EAdd(eX...)
-	sumY := pk.EAdd(eY...)
-
-	meanXTmp := pk.ECMult(sumX, invNumRowsEncoded)
-	meanYTmp := pk.ECMult(sumY, invNumRowsEncoded)
-
-	if meanXTmp.C.Cmp(trans.Entries[0].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	if meanYTmp.C.Cmp(trans.Entries[0].CtIn[1].C) != 0 {
-		verified = false
-	}
-
-	meanX := trans.Entries[0].CtOut[0]
-	meanY := trans.Entries[0].CtOut[1]
-
-	sumsSdX := make([]*paillier.Ciphertext, numRows)
-	sumsSdY := make([]*paillier.Ciphertext, numRows)
-
-	for i := 0; i < numRows; i++ {
-		sdx := pk.ESub(eX[i], meanX)
-		sdy := pk.ESub(eY[i], meanY)
-
-		if sdx.C.Cmp(trans.Entries[i+1].CtIn[0].C) != 0 {
-			verified = false
-		}
-
-		if sdy.C.Cmp(trans.Entries[i+1].CtIn[1].C) != 0 {
-			verified = false
-		}
-
-		sumsSdX[i] = trans.Entries[i+1].CtOut[0]
-		sumsSdY[i] = trans.Entries[i+1].CtOut[1]
-	}
-
-	// compute the standard deviation
-	sdX := pk.EAdd(sumsSdX...)
-	sdY := pk.EAdd(sumsSdY...)
-
-	denEncoded := pk.EncodeFixedPoint(
-		big.NewFloat(1.0/float64(numRows-1)),
-		fpprec)
-	sdXTmp := pk.ECMult(sdX, denEncoded)
-	sdYTmp := pk.ECMult(sdY, denEncoded)
-
-	if sdXTmp.C.Cmp(trans.Entries[numRows+1].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	if sdYTmp.C.Cmp(trans.Entries[numRows+1].CtIn[1].C) != 0 {
-		verified = false
-	}
-
-	sdX = trans.Entries[numRows+1].CtOut[0]
-	sdY = trans.Entries[numRows+1].CtOut[1]
-
-	numerator := pk.ESub(meanX, meanY)
-	if numerator.C.Cmp(trans.Entries[numRows+2].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	numeratorTmp := trans.Entries[numRows+2].CtOut[0]
-
-	if numeratorTmp.C.Cmp(trans.Entries[numRows+3].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	tx := pk.ESub(pk.ECMult(sdX, big.NewInt(int64(dataset.NumRows))), sdX)
-	ty := pk.ESub(pk.ECMult(sdY, big.NewInt(int64(dataset.NumRows))), sdY)
-	denominatorTmp := pk.EAdd(tx, ty)
-
-	if denominatorTmp.C.Cmp(trans.Entries[numRows+4].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	denominator := trans.Entries[numRows+4].CtOut[0]
-
-	df := pk.EncodeFixedPoint(
-		big.NewFloat(1.0/float64(dataset.NumRows*dataset.NumRows-dataset.NumRows)),
-		fpprec)
-	denominatorTmp = pk.ECMult(denominator, df)
-
-	if denominatorTmp.C.Cmp(trans.Entries[numRows+5].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	denominator = trans.Entries[numRows+5].CtOut[0]
-
-	return verified, time.Now().Sub(startTime)
 }

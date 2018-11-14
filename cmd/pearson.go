@@ -19,8 +19,6 @@ func PearsonsTestSimulation(
 	eX := dataset.Data[0]
 	eY := dataset.Data[1]
 
-	trans := newMPCTranscript(dataset.NumRows + 6)
-
 	startTime := time.Now()
 	invNumRows := big.NewFloat(1.0 / float64(dataset.NumRows))
 	invNumRowsEncoded := mpc.Pk.EncodeFixedPoint(invNumRows, mpc.FPPrecBits)
@@ -34,13 +32,6 @@ func PearsonsTestSimulation(
 
 	meanX := mpc.ETruncPR(meanXTmp, mpc.K, mpc.FPPrecBits)
 	meanY := mpc.ETruncPR(meanYTmp, mpc.K, mpc.FPPrecBits)
-
-	// entry #1 for TruncPR interactive protocol
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: ETruncPR,
-		CtIn:     []*paillier.Ciphertext{meanXTmp, meanYTmp},
-		CtOut:    []*paillier.Ciphertext{meanX, meanY},
-	})
 
 	if debug {
 		// sanity check
@@ -71,59 +62,24 @@ func PearsonsTestSimulation(
 			devsY2[i] = mpc.EMult(devY, devY)
 			prodsXY[i] = mpc.EMult(devX, devY)
 
-			// entry #2 for Mult interactive protocol
-			trans.setEntryAtIndex(&MPCTranscriptEntry{
-				Protocol: EMult,
-				CtIn:     []*paillier.Ciphertext{devX, devY},
-				CtOut:    []*paillier.Ciphertext{devsX2[i], devsY2[i], prodsXY[i]},
-			}, i+1)
 		}(i)
 	}
 
 	wg.Wait()
-
-	trans.Next = dataset.NumRows + 1
 
 	// compute sum for all i (x_i - mean_x)(y_i - mean_y)
 	sumXY := mpc.Pk.EAdd(prodsXY...)
 
 	sumDevX2 := mpc.Pk.EAdd(devsX2...)
 	sumDevY2 := mpc.Pk.EAdd(devsY2...)
+	sumDevX2 = mpc.ETruncPR(sumDevX2, 2*mpc.K, mpc.FPPrecBits)
+	sumDevY2 = mpc.ETruncPR(sumDevY2, 2*mpc.K, mpc.FPPrecBits)
 
 	// compute the numerator = [sum for all i (x_i - mean_x)(y_i - mean_y)]
-	numeratorTmp := mpc.EMult(sumXY, sumXY)
-
-	// entry #3 for Trunc interactive protocol
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: EMult,
-		CtIn:     []*paillier.Ciphertext{sumXY, sumXY},
-		CtOut:    []*paillier.Ciphertext{numeratorTmp},
-	})
-
-	numerator := mpc.ETruncPR(numeratorTmp, 3*mpc.K, 3*mpc.FPPrecBits)
-
-	// entry #3 for Trunc interactive protocol
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: ETruncPR,
-		CtIn:     []*paillier.Ciphertext{numeratorTmp},
-		CtOut:    []*paillier.Ciphertext{numerator},
-	})
+	numerator := sumXY
 
 	denominatorTmp := mpc.EMult(sumDevX2, sumDevY2)
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: EMult,
-		CtIn:     []*paillier.Ciphertext{sumDevX2, sumDevY2},
-		CtOut:    []*paillier.Ciphertext{denominatorTmp},
-	})
-
-	denominator := mpc.ETruncPR(denominatorTmp, 3*mpc.K, 3*mpc.FPPrecBits)
-
-	// entry #4 for Trunc interactive protocol
-	trans.addEntry(&MPCTranscriptEntry{
-		Protocol: EMult,
-		CtIn:     []*paillier.Ciphertext{denominatorTmp},
-		CtOut:    []*paillier.Ciphertext{denominator},
-	})
+	denominator := mpc.ETruncPR(denominatorTmp, 2*mpc.K, mpc.FPPrecBits)
 
 	if debug {
 		// sanity check
@@ -148,15 +104,35 @@ func PearsonsTestSimulation(
 			mpc.RevealShareFP(denominatorShare, mpc.FPPrecBits).String())
 	}
 
-	res := mpc.FPDivision(numeratorShare, denominatorShare)
+	signbit := mpc.SignBit(numeratorShare)
 
-	stat2 := mpc.RevealShareFP(res, mpc.FPPrecBits)
-	stat := stat2.Sqrt(stat2)
+	// reveal the sign bit since it's made public at the end regardless
+	isNegative := mpc.RevealShare(signbit).Int64()
+
+	rcpr := mpc.FPSqrtReciprocal(denominatorShare)
+
+	if isNegative == 1 {
+		numeratorShare = mpc.MultC(numeratorShare, new(big.Int).Sub(mpc.P, big.NewInt(1)))
+		if debug {
+			fmt.Printf("[DEBUG] NUMERATOR (abs): %s\n",
+				mpc.RevealShare(numeratorShare).String())
+		}
+	}
+	numeratorShare = mpc.TruncPR(numeratorShare, 2*mpc.K, mpc.FPPrecBits)
+	precAdjust := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.K/2-mpc.FPPrecBits)), nil)
+	numeratorShare = mpc.MultC(numeratorShare, precAdjust)
+
+	res := mpc.Mult(numeratorShare, rcpr)
+	rstat := mpc.RevealShareFP(res, mpc.K)
+
+	if isNegative == 1 {
+		rstat.Mul(rstat, big.NewFloat(-1))
+	}
 
 	endTime := time.Now()
 
 	if debug {
-		fmt.Printf("[DEBUG] PEARSON CORRELATION STATISTIC, r = %s\n", stat.String())
+		fmt.Printf("[DEBUG] PEARSON CORRELATION STATISTIC, r = %s\n", rstat.String())
 		fmt.Println("[DEBUG] RUNTIME: " + endTime.Sub(startTime).String())
 	}
 
@@ -166,105 +142,10 @@ func PearsonsTestSimulation(
 
 	return &TestResult{
 		Test:             "PEARSON",
-		Value:            stat,
+		Value:            rstat,
 		TotalRuntime:     totalTime,
 		ComputeRuntime:   paillierTime,
 		DivRuntime:       divTime,
 		NumSharesCreated: mpc.DeleteAllShares(),
-		Transcript:       trans,
 	}
-}
-
-func PearsonAuditSimulation(
-	pk *paillier.PublicKey,
-	fpprec int,
-	dataset *EncryptedDataset,
-	trans *MPCTranscript) (bool, time.Duration) {
-
-	verified := true
-
-	eX := dataset.Data[0]
-	eY := dataset.Data[1]
-
-	startTime := time.Now()
-	invNumRows := big.NewFloat(1.0 / float64(dataset.NumRows))
-	invNumRowsEncoded := pk.EncodeFixedPoint(invNumRows, fpprec)
-
-	// sum of the squares
-	sumX := pk.EAdd(eX...)
-	sumY := pk.EAdd(eY...)
-
-	meanXTmp := pk.ECMult(sumX, invNumRowsEncoded)
-	meanYTmp := pk.ECMult(sumY, invNumRowsEncoded)
-
-	if meanXTmp.C.Cmp(trans.Entries[0].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	if meanYTmp.C.Cmp(trans.Entries[0].CtIn[1].C) != 0 {
-		verified = false
-	}
-
-	meanX := trans.Entries[0].CtOut[0]
-	meanY := trans.Entries[0].CtOut[1]
-
-	// compute (x_i - mean_x)(y_i - mean_y)
-	prodsXY := make([]*paillier.Ciphertext, dataset.NumRows)
-
-	// SUM (x_i - mean_x)^2
-	devsX2 := make([]*paillier.Ciphertext, dataset.NumRows)
-
-	// SUM (y_i - mean_y)^2
-	devsY2 := make([]*paillier.Ciphertext, dataset.NumRows)
-
-	for i := 0; i < dataset.NumRows; i++ {
-
-		devX := pk.ESub(eX[i], meanX)
-		devY := pk.ESub(eY[i], meanY)
-		if devX.C.Cmp(trans.Entries[i+1].CtIn[0].C) != 0 {
-			verified = false
-		}
-
-		if devY.C.Cmp(trans.Entries[i+1].CtIn[1].C) != 0 {
-			verified = false
-		}
-
-		devsX2[i] = trans.Entries[i+1].CtOut[0]
-		devsY2[i] = trans.Entries[i+1].CtOut[1]
-		prodsXY[i] = trans.Entries[i+1].CtOut[2]
-
-	}
-
-	// compute sum for all i (x_i - mean_x)(y_i - mean_y)
-	sumXY := pk.EAdd(prodsXY...)
-
-	sumDevX2 := pk.EAdd(devsX2...)
-	sumDevY2 := pk.EAdd(devsY2...)
-
-	if sumXY.C.Cmp(trans.Entries[dataset.NumRows+1].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	// compute the numerator = [sum for all i (x_i - mean_x)(y_i - mean_y)]
-	numeratorTmp := trans.Entries[dataset.NumRows+1].CtOut[0]
-
-	if numeratorTmp.C.Cmp(trans.Entries[dataset.NumRows+2].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	if sumDevX2.C.Cmp(trans.Entries[dataset.NumRows+3].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	if sumDevY2.C.Cmp(trans.Entries[dataset.NumRows+3].CtIn[1].C) != 0 {
-		verified = false
-	}
-
-	denominatorTmp := trans.Entries[dataset.NumRows+3].CtOut[0]
-
-	if denominatorTmp.C.Cmp(trans.Entries[dataset.NumRows+4].CtIn[0].C) != 0 {
-		verified = false
-	}
-
-	return verified, time.Now().Sub(startTime)
 }
