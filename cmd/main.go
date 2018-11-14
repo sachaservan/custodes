@@ -48,7 +48,7 @@ func main() {
 		params = &hypocert.MPCKeyGenParams{
 			NumParties:      numParties,
 			Threshold:       threshold,
-			KeyBits:         512,
+			KeyBits:         1024,
 			MessageBits:     100,
 			SecurityBits:    40,
 			FPPrecisionBits: 30,
@@ -58,7 +58,7 @@ func main() {
 		params = &hypocert.MPCKeyGenParams{
 			NumParties:      3,
 			Threshold:       2,
-			KeyBits:         512,
+			KeyBits:         1024,
 			MessageBits:     100,
 			SecurityBits:    40,
 			FPPrecisionBits: 30,
