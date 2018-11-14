@@ -90,8 +90,6 @@ func runChiSqBechmarks(
 
 	encD, setupTime := encryptCategoricalDataset(mpc, filename, example)
 	testResult := ChiSquaredTestSimulation(mpc, encD, debug)
-	verified, auditTime := ChiSquaredAuditSimulation(
-		mpc.Pk, mpc.FPPrecBits, encD, testResult.Transcript)
 
 	if writeToFile {
 		r := &TestReport{
@@ -101,7 +99,6 @@ func runChiSqBechmarks(
 			SetupTime:        setupTime.Seconds(),
 			ComputeRuntime:   testResult.ComputeRuntime.Seconds(),
 			DivRuntime:       testResult.DivRuntime.Seconds(),
-			AuditRuntime:     auditTime.Seconds(),
 			NumParties:       numParties,
 			NumRows:          encD.NumRows,
 			NumCols:          encD.NumCols,
@@ -122,8 +119,6 @@ func runChiSqBechmarks(
 		fmt.Printf("---Computation runtime (s):  %f\n", testResult.ComputeRuntime.Seconds())
 		fmt.Printf("---Division runtime (s):     %f\n", testResult.DivRuntime.Seconds())
 		fmt.Printf("Network latency (s):         %f\n", latency.Seconds())
-		fmt.Printf("Audit verifies:              %t\n", verified)
-		fmt.Printf("Audit time (s):              %f\n", auditTime.Seconds())
 		fmt.Println("************************************************")
 	}
 }
@@ -155,7 +150,6 @@ func runTTestBechmarks(
 	}
 
 	testResult := TTestSimulation(mpc, encD, debug)
-	verified, auditTime := TTestAuditSimulation(mpc.Pk, mpc.FPPrecBits, encD, testResult.Transcript)
 
 	if writeToFile {
 		r := &TestReport{
@@ -165,7 +159,6 @@ func runTTestBechmarks(
 			SetupTime:        setupTime.Seconds(),
 			ComputeRuntime:   testResult.ComputeRuntime.Seconds(),
 			DivRuntime:       testResult.DivRuntime.Seconds(),
-			AuditRuntime:     auditTime.Seconds(),
 			NumParties:       numParties,
 			NumRows:          encD.NumRows,
 			NumCols:          encD.NumCols,
@@ -185,8 +178,6 @@ func runTTestBechmarks(
 		fmt.Printf("---Computation runtime (s):  %f\n", testResult.ComputeRuntime.Seconds())
 		fmt.Printf("---Division runtime (s):     %f\n", testResult.DivRuntime.Seconds())
 		fmt.Printf("Network latency (s):         %f\n", latency.Seconds())
-		fmt.Printf("Audit verifies:              %t\n", verified)
-		fmt.Printf("Audit time (s):              %f\n", auditTime.Seconds())
 		fmt.Println("************************************************")
 	}
 }
@@ -218,7 +209,6 @@ func runPearsonsBechmarks(
 	}
 
 	testResult := PearsonsTestSimulation(mpc, encD, debug)
-	verified, auditTime := PearsonAuditSimulation(mpc.Pk, mpc.FPPrecBits, encD, testResult.Transcript)
 
 	if writeToFile {
 		r := &TestReport{
@@ -228,7 +218,6 @@ func runPearsonsBechmarks(
 			SetupTime:        setupTime.Seconds(),
 			ComputeRuntime:   testResult.ComputeRuntime.Seconds(),
 			DivRuntime:       testResult.DivRuntime.Seconds(),
-			AuditRuntime:     auditTime.Seconds(),
 			NumParties:       numParties,
 			NumRows:          encD.NumRows,
 			NumCols:          encD.NumCols,
@@ -248,8 +237,6 @@ func runPearsonsBechmarks(
 		fmt.Printf("---Computation runtime (s):  %f\n", testResult.ComputeRuntime.Seconds())
 		fmt.Printf("---Division runtime (s):     %f\n", testResult.DivRuntime.Seconds())
 		fmt.Printf("Network latency (s):         %f\n", latency.Seconds())
-		fmt.Printf("Audit verifies:              %t\n", verified)
-		fmt.Printf("Audit time (s):              %f\n", auditTime.Seconds())
 		fmt.Println("************************************************")
 	}
 }
