@@ -1,0 +1,14 @@
+{
+	"Test": "T-Test",
+	"Value": "0.342201951997653",
+	"TotalRuntime": 28.452310944,
+	"SetupTime": 5.720078482,
+	"ComputeRuntime": 17.212612427,
+	"DivRuntime": 11.239704802,
+	"AuditRuntime": 0.684005492,
+	"NumParties": 3,
+	"NumRows": 10000,
+	"NumCols": 2,
+	"NumSharesCreated": 69237,
+	"RunId": 1
+}

@@ -14,6 +14,7 @@ import os.path
 import pickle
 import time
 import matplotlib.dates as mdates
+from matplotlib.font_manager import FontProperties
 
 sns.set(context='paper', style={'axes.axisbelow': True,
     'axes.edgecolor': '.8',
@@ -33,95 +34,95 @@ sns.set(context='paper', style={'axes.axisbelow': True,
     'legend.scatterpoints': 1,
     'lines.solid_capstyle': u'butt',
     'text.color': '.15',
-    'xtick.color': '.15',
+    'xtick.color': '.8',
     'xtick.direction': u'out',
     'xtick.major.size': 0.0,
     'xtick.minor.size': 0.0,
-    'ytick.color': '.15',
+    'ytick.color': '.8',
     'ytick.direction': u'out',
     'ytick.major.size': 0.0,
     'ytick.minor.size': 0.0}, font_scale = 1.2)
 
 flatui = ['#28aad5', '#b24d94', '#38ae97' ,'#ec7545']
 
+datasetname = { 'T-Test'  : {1000 : 'rand_1k', 5000: 'rand_5k', 10000: 'rand_10k', 4177: 'Abalone'},
+                'Pearson' : {1000 : 'rand_1k', 5000: 'rand_5k', 10000: 'rand_10k', 4177: 'Abalone'}, 
+                'Chi-Squared' : {1000 : 'cat_1k', 5000: 'cat_5k', 10000: 'cat_10k', 108: 'Pittsburgh'}}
 
-def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
+sortorder = { 'T-Test'  : {1000 : '1', 5000: '2', 10000: '3', 4177: '0'},
+              'Pearson' : {1000 : '1', 5000: '2', 10000: '3', 4177: '0'}, 
+              'Chi-Squared' : {1000 : '1', 5000: '2', 10000: '3', 108: '0'}}
+
+
+def runtime_bar(type, data, showCategoriesLabel, show, size, fn = None):
     comptime = {}
-    comparetime = {}
     divtime = {}
     
     numParties = []
-    datasetSizes = []
-    categories = []
+    NumRowss = []
+    categories = {}
     
     #prefill
     for d in data:
-        if d['TestType'] == type and d['UseShares'] == shares:
-            if d['DatasetSize'] not in datasetSizes:
-                datasetSizes.append(d['DatasetSize'])
-                comptime[d['DatasetSize']] = {}
-                divtime[d['DatasetSize']] = {}
-                comparetime[d['DatasetSize']] = {}
+        if d['Test'] == type:
+            if d['NumRows'] not in NumRowss:
+                NumRowss.append(d['NumRows'])
+                comptime[d['NumRows']] = {}
+                divtime[d['NumRows']] = {}
+                categories[d['NumRows']] = []
                 
-            if d['NumberOfParties'] not in numParties:
-                numParties.append(d['NumberOfParties'])
+            if d['NumParties'] not in numParties:
+                numParties.append(d['NumParties'])
                 
-            if d['NumberOfCategories'] not in categories:
-                categories.append(d['NumberOfCategories'])
+            if d['NumCols'] not in categories[d['NumRows']]:
+                categories[d['NumRows']].append(d['NumCols'])
                 
-            if d['NumberOfParties'] not in comptime[d['DatasetSize']]:
-                comptime[d['DatasetSize']][d['NumberOfParties']] = {}
-                divtime[d['DatasetSize']][d['NumberOfParties']] = {} 
-                comparetime[d['DatasetSize']][d['NumberOfParties']] = {}                  
+            if d['NumParties'] not in comptime[d['NumRows']]:
+                comptime[d['NumRows']][d['NumParties']] = {}
+                divtime[d['NumRows']][d['NumParties']] = {}                
 
-            if d['NumberOfCategories'] not in comptime[d['DatasetSize']][d['NumberOfParties']]:
-                comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []
-                divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []   
-                comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']] = []   
+            if d['NumCols'] not in comptime[d['NumRows']][d['NumParties']]:
+                comptime[d['NumRows']][d['NumParties']][d['NumCols']] = []
+                divtime[d['NumRows']][d['NumParties']][d['NumCols']] = []   
        
     for d in data:
-        if d['TestType'] == type and d['UseShares'] == shares:
-            comptime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComputationTime'])
-            divtime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['DivisionTime'])
-            comparetime[d['DatasetSize']][d['NumberOfParties']][d['NumberOfCategories']].append(d['ComparisonTime'])
+        if d['Test'] == type:
+            comptime[d['NumRows']][d['NumParties']][d['NumCols']].append(d['ComputeRuntime'])
+            divtime[d['NumRows']][d['NumParties']][d['NumCols']].append(d['DivRuntime'])
             
-    print(numParties, datasetSizes)        
-    width = 0.15    
+    print(categories)        
+    width = 0.24 
     gap = 0.02
     f, (ax1) = plt.subplots(1, 1, sharey=False, figsize=size)
     numParties = sorted(numParties)
-    datasetSizes = sorted(datasetSizes)
-    categories = sorted(categories)
+    NumRowss = sorted(NumRowss)
+    NumRowss = sorted(NumRowss, key=lambda k: sortorder[type][k]) 
+    print(NumRowss)
     
-    xIndices = len(numParties) * len(datasetSizes)  
     xLabels = {}
     p1 = None
     p2 = None
-    p3 = None
-    datasetLabelPrefix = '\n'
-    for ds, datasetSize in enumerate(datasetSizes): 
-        xLabels[datasetSize] = {} 
-        for c, category in enumerate(categories):  
-            xLabels[datasetSize][category] = []
-            idx = ds * len(categories) + c 
+    ccc = 0
+    for ds, NumRows in enumerate(NumRowss): 
+        xLabels[NumRows] = {} 
+        for c, category in enumerate(sorted(categories[NumRows])):   
+            xLabels[NumRows][category] = []
+            idx = ccc #ds * len(categories[NumRows]) + c 
+            ccc = ccc + 1
             
-            for p, numParty in enumerate(numParties):        
-                mean_comp = np.array(comptime[datasetSize][numParty][category]).mean() 
-                std_comp = np.array(comptime[datasetSize][numParty][category]).std()
-                mean_div = np.array(divtime[datasetSize][numParty][category]).mean()
-                std_div = np.array(divtime[datasetSize][numParty][category]).std()
-                mean_compare = np.array(comparetime[datasetSize][numParty][category]).mean()
-                std_compare = np.array(comparetime[datasetSize][numParty][category]).std()
+            for p, numParty in enumerate(numParties):          
+                mean_comp = np.array(comptime[NumRows][numParty][category]).mean() 
+                std_comp = np.array(comptime[NumRows][numParty][category]).std()
+                mean_div = np.array(divtime[NumRows][numParty][category]).mean()
+                std_div = np.array(divtime[NumRows][numParty][category]).std()
                 #current_in
                 total_width = width * len(numParties) + gap * (len(numParties) - 1)
                 pos = (idx - total_width / 2 + width / 2) + width * p + gap * p
                 
-                xLabels[datasetSize][category].append((pos, numParty))
+                xLabels[NumRows][category].append((pos, numParty))
                 
-                p1 = ax1.bar(pos, mean_comp, width, yerr=std_comp, color=flatui[0])            
-                p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=std_div, color=flatui[1], hatch='//')
-                if mean_compare != 0:
-                    p3 = ax1.bar(pos, mean_compare, width, bottom=mean_div + mean_comp, yerr=std_compare, color=flatui[3], hatch='\\')
+                p1 = ax1.bar(pos, mean_comp, width, yerr=std_comp, color=flatui[1], hatch='//')            
+                p2 = ax1.bar(pos, mean_div, width, bottom=mean_comp, yerr=std_div, color=flatui[0])
           
     # label
     axis_to_data = ax1.transAxes + ax1.transData.inverted()
@@ -129,6 +130,7 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
     width_trans = data_to_axis.transform([width / 2, 0])[0]
     cat_yoff = -.20
     ds_yoff = -.30
+    leftmost = 1000
     if not showCategoriesLabel:
         ds_yoff = cat_yoff
     pa_yoff = -.1
@@ -157,41 +159,45 @@ def runtime_bar(type, data, shares, showCategoriesLabel, show, size):
                 xpos = np.array(cat_all_xpos).mean()
                 ax1.text(xpos, cat_yoff, str(cat), ha='center', fontsize=11, transform=ax1.transAxes)
                 xpos = np.array(cat_min_xpos).min() 
-                plt.plot([xpos, xpos], [0, cat_yoff], 'k-', lw=0.5, color='.8', clip_on=False, transform=ax1.transAxes)
+                plt.plot([xpos, xpos], [0, cat_yoff], 'k-', lw=1.0, color='.8', clip_on=False, transform=ax1.transAxes)
                 xpos = np.array(cat_max_xpos).max()
-                plt.plot([xpos, xpos], [0, cat_yoff], 'k-', lw=0.5, color='.8', clip_on=False, transform=ax1.transAxes)
+                plt.plot([xpos, xpos], [0, cat_yoff], 'k-', lw=1.0, color='.8', clip_on=False, transform=ax1.transAxes)
                     
                 
         xpos = np.array(all_xpos).mean()
-        ax1.text(xpos, ds_yoff, str(ds), ha='center', fontsize=11, transform=ax1.transAxes)
+        dsName = datasetname[type][ds]
+        ax1.text(xpos, ds_yoff, dsName, ha='center', fontsize=11, transform=ax1.transAxes)
         xpos = np.array(min_xpos).min() 
-        plt.plot([xpos, xpos], [0, ds_yoff], 'k-', lw=0.5, color='.8', clip_on=False, transform=ax1.transAxes)
+        leftmost = min(leftmost, xpos)
+        plt.plot([xpos, xpos], [0, ds_yoff], 'k-', lw=2.5, color='.8', clip_on=False, transform=ax1.transAxes)
         xpos = np.array(max_xpos).max()
-        plt.plot([xpos, xpos], [0, ds_yoff], 'k-', lw=0.5, color='.8', clip_on=False, transform=ax1.transAxes)
+        plt.plot([xpos, xpos], [0, ds_yoff], 'k-', lw=2.5, color='.8', clip_on=False, transform=ax1.transAxes)
+
+    ax1.text(leftmost-0.005, pa_yoff, '# parties:', ha='right', fontsize=11, transform=ax1.transAxes)
+    ax1.text(leftmost-0.005, ds_yoff, 'dataset:', ha='right', fontsize=11, transform=ax1.transAxes)
+    if showCategoriesLabel:
+        ax1.text(leftmost-0.005, cat_yoff, '# categories:', ha='right', fontsize=11, transform=ax1.transAxes)
         
     f.subplots_adjust(bottom=0.3)
     plt.xticks([])
     ax1.xaxis.grid(False)
-    ax1.set_ylabel('time (mm:ss)')
-    formatter = matplotlib.ticker.FuncFormatter(lambda ms, x: time.strftime('%M:%S', time.gmtime(ms)))
-    ax1.yaxis.set_major_formatter(formatter)
     ymin, ymax = ax1.get_ylim()
-    step = 60
-    print ( ymax / step)
-    if ymax / step > 9 and ymax / step < 20:
-        step = 2 * 60
-    elif ymax / step > 20:
-        step = 5 * 60
-    plt.yticks(range(0, int(ymax), step))
-    if p3 is not None:
-        plt.legend((p1[0], p2[0], p3[0]), ('computation', 'division', 'compare'))
-    else:
-        plt.legend((p1[0], p2[0]), ('computation', 'division'))
+    ax1.set_ylim([ymin, ymax * 1.3])
+    ax1.set_ylabel('time in seconds')
+    #formatter = matplotlib.ticker.FuncFormatter(lambda ms, x: time.strftime('%M:%S', time.gmtime(ms)))
+    #ax1.yaxis.set_major_formatter(formatter)
+   
+    plt.legend((p1[0], p2[0]), ('local + interactive computations', 'division computation'))
+    plt.setp(ax1.get_xticklabels(), color=".15")
+    plt.setp(ax1.get_yticklabels(), color=".15")
     
-    mode = 'noshares'
-    if shares:
-        mode = 'shares'
-    f.savefig('fig/runtime_' + type.lower() + '_' + mode + '.pdf', bbox_inches='tight')
+    mode = 'shares'
+    #if shares:
+    #    mode = 'shares'
+    if fn is None:
+        f.savefig('fig/runtime_' + type.lower() + '_' + mode + '.pdf', bbox_inches='tight')
+    else:
+         f.savefig('fig/runtime_' + fn + '.pdf', bbox_inches='tight')
     
     
     if show:
@@ -204,17 +210,21 @@ if __name__== "__main__":
     show = True
     
     all_runs = []
-    for filename in glob.glob("./res/*.json"):
+    for filename in glob.glob("../results/*.json"):
         with open(filename) as f:
             data = json.load(f)
             all_runs.append(data)
-            
-    for d in all_runs:
-        if d['TestType'] == 'TTEST' and d['UseShares'] == True and d['NumberOfParties'] == 16 and d['DatasetSize'] == 10000:
-            print (d['DivisionTime'])
     
-    runtime_bar('CHI2', all_runs, True, True, show, (14, 4))    
-    runtime_bar('TTEST', all_runs, True, False, show, (6, 4))
-    runtime_bar('PEARSON', all_runs, True, False, show, (6, 4))
+    for d in all_runs:
+        if d['Test'] == 'T-Test' and d['NumParties'] == 16 and d['NumRows'] == 10000:
+            print (d['DivRuntime'])
+    
+    runtime_bar('Chi-Squared', all_runs, True, show, (14, 4))    
+    runtime_bar('T-Test', all_runs, False, show, (6, 4))
+    runtime_bar('Pearson', all_runs, False, show, (6, 4))
+
+    runtime_bar('Chi-Squared', [x for x in all_runs if x['NumCols'] == 5 or x['NumCols'] == 4], True, show, (6, 4), 'chi_5')   
+    runtime_bar('Chi-Squared', [x for x in all_runs if x['NumCols'] == 10], True, show, (6, 4), 'chi_10')  
+    runtime_bar('Chi-Squared', [x for x in all_runs if x['NumCols'] == 20], True, show, (6, 4), 'chi_20')        
         
         

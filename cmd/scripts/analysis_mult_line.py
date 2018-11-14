@@ -42,7 +42,7 @@ sns.set(context='paper', style={'axes.axisbelow': True,
     'ytick.major.size': 0.0,
     'ytick.minor.size': 0.0}, font_scale = 1.2)
 
-flatui = ['#28aad5', '#b24d94', '#38ae97' ,'#ec7545']
+flatui = ['#4C72B0', '#55A868', '#C44E52']
 
 
 def multiplication_line(show, size):
