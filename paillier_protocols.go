@@ -147,8 +147,14 @@ func (mpc *MPC) ERandomAndShare(bound *big.Int) (*paillier.Ciphertext, *party.Sh
 
 func (mpc *MPC) PaillierToShare(ct *paillier.Ciphertext) *party.Share {
 
-	bound := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.S)), nil)
+	bound := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.K+mpc.S)), nil)
+	big2K := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(mpc.K)), nil)
 	r, rshare := mpc.ERandomAndShare(bound)
+	r = mpc.Pk.Encrypt(big.NewInt(0))
+	rshare = mpc.CreateShares(big.NewInt(0))
+
+	r = mpc.Pk.EAdd(r, mpc.Pk.Encrypt(big2K))
+	rshare = mpc.Add(rshare, mpc.CreateShares(big2K))
 	val := mpc.RevealInt(mpc.Pk.EAdd(ct, r))
 	share := mpc.CreateShares(val)
 	res := mpc.Sub(share, rshare)
