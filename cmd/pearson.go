@@ -96,6 +96,8 @@ func PearsonsTestSimulation(
 	// done with paillier computations
 	endTimePaillier := time.Now()
 
+	startTimeSign := time.Now()
+
 	if debug {
 		// sanity check
 		fmt.Printf("[DEBUG] NUMERATOR (Share):   %s\n",
@@ -108,6 +110,8 @@ func PearsonsTestSimulation(
 
 	// reveal the sign bit since it's made public at the end regardless
 	isNegative := mpc.RevealShare(signbit).Int64()
+
+	endTimeSign := time.Now()
 
 	rcpr := mpc.FPSqrtReciprocal(denominatorShare)
 
@@ -137,15 +141,17 @@ func PearsonsTestSimulation(
 	}
 
 	totalTime := endTime.Sub(startTime)
-	divTime := time.Now().Sub(endTimePaillier)
+	signExtractionTime := endTimeSign.Sub(startTimeSign)
+	divTime := time.Now().Sub(endTimeSign)
 	paillierTime := endTimePaillier.Sub(startTime)
 
 	return &TestResult{
-		Test:             "PEARSON",
-		Value:            rstat,
-		TotalRuntime:     totalTime,
-		ComputeRuntime:   paillierTime,
-		DivRuntime:       divTime,
-		NumSharesCreated: mpc.DeleteAllShares(),
+		Test:                  "PEARSON",
+		Value:                 rstat,
+		TotalRuntime:          totalTime,
+		ComputeRuntime:        paillierTime,
+		SignExtractionRuntime: signExtractionTime,
+		DivRuntime:            divTime,
+		NumSharesCreated:      mpc.DeleteAllShares(),
 	}
 }

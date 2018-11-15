@@ -101,6 +101,8 @@ func TTestSimulation(
 	// end paillier benchmark
 	endTimePaillier := time.Now()
 
+	startTimeSign := time.Now()
+
 	signbit := mpc.SignBit(numeratorShare)
 
 	// reveal the sign bit since it's made public at the end regardless
@@ -114,6 +116,8 @@ func TTestSimulation(
 				mpc.RevealShare(numeratorShare).String())
 		}
 	}
+
+	endTimeSign := time.Now()
 
 	rcpr := mpc.FPSqrtReciprocal(denominatorShare)
 
@@ -138,15 +142,17 @@ func TTestSimulation(
 
 	// compute all the runtimes
 	totalTime := endTime.Sub(startTime)
-	divTime := time.Now().Sub(endTimePaillier)
+	signExtractionTime := endTimeSign.Sub(startTimeSign)
+	divTime := time.Now().Sub(endTimeSign)
 	paillierTime := endTimePaillier.Sub(startTime)
 
 	return &TestResult{
-		Test:             "T-TEST",
-		Value:            tstat,
-		TotalRuntime:     totalTime,
-		ComputeRuntime:   paillierTime,
-		DivRuntime:       divTime,
-		NumSharesCreated: mpc.DeleteAllShares(),
+		Test:                  "T-TEST",
+		Value:                 tstat,
+		TotalRuntime:          totalTime,
+		ComputeRuntime:        paillierTime,
+		SignExtractionRuntime: signExtractionTime,
+		DivRuntime:            divTime,
+		NumSharesCreated:      mpc.DeleteAllShares(),
 	}
 }

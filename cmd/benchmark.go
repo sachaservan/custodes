@@ -44,28 +44,30 @@ type EncryptedDataset struct {
 }
 
 type TestResult struct {
-	Test             string
-	Value            *big.Float
-	TotalRuntime     time.Duration
-	ComputeRuntime   time.Duration
-	DivRuntime       time.Duration
-	NumSharesCreated int
-	Transcript       *MPCTranscript // transcript of all MPC protocols
+	Test                  string
+	Value                 *big.Float
+	TotalRuntime          time.Duration
+	ComputeRuntime        time.Duration
+	SignExtractionRuntime time.Duration
+	DivRuntime            time.Duration
+	NumSharesCreated      int
+	Transcript            *MPCTranscript // transcript of all MPC protocols
 }
 
 type TestReport struct {
-	Test             string
-	Value            *big.Float
-	TotalRuntime     float64
-	SetupTime        float64
-	ComputeRuntime   float64
-	DivRuntime       float64
-	AuditRuntime     float64
-	NumParties       int
-	NumRows          int
-	NumCols          int
-	NumSharesCreated int
-	RunId            int
+	Test                  string
+	Value                 *big.Float
+	TotalRuntime          float64
+	SetupTime             float64
+	ComputeRuntime        float64
+	SignExtractionRuntime float64
+	DivRuntime            float64
+	AuditRuntime          float64
+	NumParties            int
+	NumRows               int
+	NumCols               int
+	NumSharesCreated      int
+	RunId                 int
 }
 
 func runChiSqBechmarks(
@@ -153,17 +155,18 @@ func runTTestBechmarks(
 
 	if writeToFile {
 		r := &TestReport{
-			Test:             "T-Test",
-			Value:            testResult.Value,
-			TotalRuntime:     testResult.TotalRuntime.Seconds(),
-			SetupTime:        setupTime.Seconds(),
-			ComputeRuntime:   testResult.ComputeRuntime.Seconds(),
-			DivRuntime:       testResult.DivRuntime.Seconds(),
-			NumParties:       numParties,
-			NumRows:          encD.NumRows,
-			NumCols:          encD.NumCols,
-			NumSharesCreated: testResult.NumSharesCreated,
-			RunId:            runId,
+			Test:                  "T-Test",
+			Value:                 testResult.Value,
+			TotalRuntime:          testResult.TotalRuntime.Seconds(),
+			SetupTime:             setupTime.Seconds(),
+			ComputeRuntime:        testResult.ComputeRuntime.Seconds(),
+			SignExtractionRuntime: testResult.SignExtractionRuntime.Seconds(),
+			DivRuntime:            testResult.DivRuntime.Seconds(),
+			NumParties:            numParties,
+			NumRows:               encD.NumRows,
+			NumCols:               encD.NumCols,
+			NumSharesCreated:      testResult.NumSharesCreated,
+			RunId:                 runId,
 		}
 		writeTestResultsToFile(r)
 	} else {
@@ -176,6 +179,7 @@ func runTTestBechmarks(
 		fmt.Printf("Dealer setup time (s): 	     %f\n", setupTime.Seconds())
 		fmt.Printf("T-Test runtime (s): 	     %f\n", testResult.TotalRuntime.Seconds())
 		fmt.Printf("---Computation runtime (s):  %f\n", testResult.ComputeRuntime.Seconds())
+		fmt.Printf("---Sign Bit runtime (s):     %f\n", testResult.SignExtractionRuntime.Seconds())
 		fmt.Printf("---Division runtime (s):     %f\n", testResult.DivRuntime.Seconds())
 		fmt.Printf("Network latency (s):         %f\n", latency.Seconds())
 		fmt.Println("************************************************")
@@ -212,17 +216,18 @@ func runPearsonsBechmarks(
 
 	if writeToFile {
 		r := &TestReport{
-			Test:             "Pearson",
-			Value:            testResult.Value,
-			TotalRuntime:     testResult.TotalRuntime.Seconds(),
-			SetupTime:        setupTime.Seconds(),
-			ComputeRuntime:   testResult.ComputeRuntime.Seconds(),
-			DivRuntime:       testResult.DivRuntime.Seconds(),
-			NumParties:       numParties,
-			NumRows:          encD.NumRows,
-			NumCols:          encD.NumCols,
-			NumSharesCreated: testResult.NumSharesCreated,
-			RunId:            runId,
+			Test:                  "Pearson",
+			Value:                 testResult.Value,
+			TotalRuntime:          testResult.TotalRuntime.Seconds(),
+			SetupTime:             setupTime.Seconds(),
+			ComputeRuntime:        testResult.ComputeRuntime.Seconds(),
+			SignExtractionRuntime: testResult.SignExtractionRuntime.Seconds(),
+			DivRuntime:            testResult.DivRuntime.Seconds(),
+			NumParties:            numParties,
+			NumRows:               encD.NumRows,
+			NumCols:               encD.NumCols,
+			NumSharesCreated:      testResult.NumSharesCreated,
+			RunId:                 runId,
 		}
 		writeTestResultsToFile(r)
 	} else {
@@ -235,6 +240,7 @@ func runPearsonsBechmarks(
 		fmt.Printf("Dealer setup time (s): 	     %f\n", setupTime.Seconds())
 		fmt.Printf("Pearson's Test runtime (s):  %f\n", testResult.TotalRuntime.Seconds())
 		fmt.Printf("---Computation runtime (s):  %f\n", testResult.ComputeRuntime.Seconds())
+		fmt.Printf("---Sign Bit runtime (s):     %f\n", testResult.SignExtractionRuntime.Seconds())
 		fmt.Printf("---Division runtime (s):     %f\n", testResult.DivRuntime.Seconds())
 		fmt.Printf("Network latency (s):         %f\n", latency.Seconds())
 		fmt.Println("************************************************")
