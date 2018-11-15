@@ -43,7 +43,7 @@ type MPCKeyGenParams struct {
 func NewMPCKeyGen(params *MPCKeyGenParams) (*MPC, error) {
 
 	nu := int(math.Log2(float64(params.NumParties)))
-	if int64(params.MessageBits+params.SecurityBits+params.FPPrecisionBits+nu+1) >= int64(2*params.KeyBits) {
+	if int64(params.MessageBits+params.SecurityBits+params.FPPrecisionBits+nu+1) >= int64(params.KeyBits) {
 		return nil, errors.New("modulus not big enough for given parameters")
 	}
 
