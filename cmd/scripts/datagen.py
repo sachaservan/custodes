@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#/usr/bin/python
 import csv
 import sys
 import math
@@ -9,6 +9,8 @@ def convert(outfile, n, valmin, valmax):
         for i in range(0, n):
             r1 = random.randint(valmin, valmax)
             r2 = random.randint(valmin, valmax)
+            if random.randint(0, 3) == 1:
+                r2 = math.floor(r1/2)
 
             fout.write("" + str(r1) + "," + str(r2) + "\n")
 
