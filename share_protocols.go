@@ -255,7 +255,7 @@ func (mpc *MPC) initReciprocal(b *party.Share) *party.Share {
 func (mpc *MPC) FPSqrtReciprocal(a *party.Share) *party.Share {
 
 	// init goldschmidt constants
-	theta := int(math.Ceil(math.Log2(float64(mpc.FPPrecBits))))
+	theta := int(math.Ceil(math.Log2(float64(mpc.K) / 3.75)))
 
 	// get initial reciprocal  approximation
 	b := mpc.CopyShare(a)
