@@ -1,14 +1,14 @@
 {
 	"Test": "Chi-Squared",
-	"Value": "2.9430000111460686",
-	"TotalRuntime": 147.724761792,
-	"SetupTime": 0.739235308,
-	"ComputeRuntime": 0.191113551,
-	"DivRuntime": 147.533648862,
-	"AuditRuntime": 0.262700899,
+	"Value": "2.9430000109301035",
+	"TotalRuntime": 155.14181819,
+	"SetupTime": 5.964827915,
+	"ComputeRuntime": 0.542088283,
+	"DivRuntime": 154.599730234,
+	"AuditRuntime": 0,
 	"NumParties": 11,
 	"NumRows": 10000,
 	"NumCols": 5,
-	"NumSharesCreated": 346399,
+	"NumSharesCreated": 345453,
 	"RunId": 1
 }
