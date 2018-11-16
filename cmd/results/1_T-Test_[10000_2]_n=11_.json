@@ -1,14 +1,15 @@
 {
 	"Test": "T-Test",
-	"Value": "0.3422004751521137",
-	"TotalRuntime": 212.679795872,
-	"SetupTime": 41.429815094,
-	"ComputeRuntime": 142.244215481,
-	"DivRuntime": 70.435580659,
+	"Value": "4.885003344782377",
+	"TotalRuntime": 227.062506213,
+	"SetupTime": 42.199801462,
+	"ComputeRuntime": 143.591541667,
+	"SignExtractionRuntime": 29.667719641,
+	"DivRuntime": 53.803245236,
 	"AuditRuntime": 0,
 	"NumParties": 11,
 	"NumRows": 10000,
 	"NumCols": 2,
-	"NumSharesCreated": 130737,
+	"NumSharesCreated": 130738,
 	"RunId": 1
 }
