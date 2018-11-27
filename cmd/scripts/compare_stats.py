@@ -11,7 +11,7 @@ datasets = {4177: pd.read_csv('../datasets/abalone_height_vs_weight.csv', names 
             10000: pd.read_csv('../datasets/benchmark_10000.csv', names =['A', 'B'])}
 
 df = pd.read_csv('data.csv')
-sums = {'TotalRuntime': [], 'SetupTime' : [], 'AuditRuntime': [], 
+sums = {'TotalRuntime': [], 'SetupTime' : [], 'AuditRuntime': [], 'SignExtractionRuntime': [], 
     'AbsoluteError' : {'T-Test': [], 'Pearson': [], 'Chi-Squared': []}, 
     'TotalRuntimePerTest' : {'T-Test': [], 'Pearson': [], 'Chi-Squared': []}}
 
@@ -45,7 +45,7 @@ for index, row in df.iterrows():
         p_value_hypo = distributions.t.sf(np.abs(stat_hypocert), df) * 2
 
         #sums['AbsoluteError'][row['Test']].append(abs(pvalue_comp - p_value_hypo))
-        sums['AbsoluteError'][row['Test']].append(abs(stat_hypocert - stat_comp))
+        sums['AbsoluteError'][row['Test']].append(abs(abs(pvalue_comp) - abs(p_value_hypo)))
         print(row['Test'], row['NumRows'], abs(pvalue_comp), p_value_hypo)
 
     elif row['Test'] == 'Pearson':
@@ -55,7 +55,7 @@ for index, row in df.iterrows():
         p_value_hypo = _betai(0.5*df, 0.5, df/(df+t_squared))
 
         #sums['AbsoluteError'][row['Test']].append(abs(pvalue_comp - p_value_hypo))
-        sums['AbsoluteError'][row['Test']].append(abs(stat_hypocert - stat_comp))
+        sums['AbsoluteError'][row['Test']].append(abs(abs(pvalue_comp) - abs(p_value_hypo)))
         print(row['Test'], row['NumRows'], abs(pvalue_comp), p_value_hypo)
         
     elif row['Test'] == 'Chi-Squared':
@@ -75,7 +75,7 @@ for index, row in df.iterrows():
         p_value_hypo = distributions.chi2.sf(stat_hypocert, row['NumCols'] - 1 - 0)
 
         #sums['AbsoluteError'][row['Test']].append(abs(pvalue_comp - p_value_hypo))
-        sums['AbsoluteError'][row['Test']].append(abs(stat_hypocert - stat_comp))
+        sums['AbsoluteError'][row['Test']].append(abs(abs(pvalue_comp) - abs(p_value_hypo)))
         print(row['Test'], row['NumRows'], abs(pvalue_comp), p_value_hypo)
         
         #        print (i)
