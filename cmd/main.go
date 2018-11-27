@@ -48,7 +48,7 @@ func main() {
 		params = &hypocert.MPCKeyGenParams{
 			NumParties:      numParties,
 			Threshold:       threshold,
-			KeyBits:         1024,
+			KeyBits:         512,
 			MessageBits:     100,
 			SecurityBits:    40,
 			FPPrecisionBits: 30,
@@ -97,7 +97,7 @@ func main() {
 			runTTestBechmarks(mpc, "", numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 		} else {
 			/* Student's t-test */
-			runTTestBechmarks(mpc, filename_abalone, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
+			//runTTestBechmarks(mpc, filename_abalone, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runTTestBechmarks(mpc, filename1000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runTTestBechmarks(mpc, filename5000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)
 			runTTestBechmarks(mpc, filename10000, numParties, networkLatency*time.Millisecond, *debug, *writeToFile, *runId, *example)

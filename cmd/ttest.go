@@ -66,13 +66,19 @@ func TTestSimulation(
 	numerator := mpc.Pk.ESub(meanX, meanY)
 
 	// compute denominator
-	denominatorTmp := mpc.Pk.EAdd(dX, dY)
+	denominator := mpc.Pk.EAdd(dX, dY)
 
-	df := mpc.Pk.EncodeFixedPoint(
-		big.NewFloat(1.0/float64(dataset.NumRows*dataset.NumRows-dataset.NumRows)),
+	// split the multiplication to ensure precision
+	df1 := mpc.Pk.EncodeFixedPoint(
+		big.NewFloat(1.0/float64(dataset.NumRows-1)),
 		mpc.FPPrecBits)
-	denominatorTmp = mpc.Pk.ECMult(denominatorTmp, df)
-	denominator := mpc.ETruncPR(denominatorTmp, 2*mpc.K, mpc.FPPrecBits)
+	df2 := mpc.Pk.EncodeFixedPoint(
+		big.NewFloat(1.0/float64(dataset.NumRows)),
+		mpc.FPPrecBits)
+	denominator = mpc.Pk.ECMult(denominator, df1)
+	denominator = mpc.ETruncPR(denominator, 2*mpc.K, mpc.FPPrecBits)
+	denominator = mpc.Pk.ECMult(denominator, df2)
+	denominator = mpc.ETruncPR(denominator, 2*mpc.K, mpc.FPPrecBits)
 
 	if debug {
 		// sanity check
