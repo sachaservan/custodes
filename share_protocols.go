@@ -1,11 +1,11 @@
-package hypocert
+package custodes
 
 import (
 	"math"
 	"math/big"
 	"sync"
 
-	"hypocert/party"
+	"custodes/party"
 )
 
 func (mpc *MPC) RevealShareFP(share *party.Share, scale int) *big.Float {

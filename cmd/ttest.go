@@ -1,8 +1,8 @@
 package main
 
 import (
+	"custodes"
 	"fmt"
-	"hypocert"
 	"math/big"
 	"sync"
 	"time"
@@ -11,7 +11,7 @@ import (
 )
 
 func TTestSimulation(
-	mpc *hypocert.MPC,
+	mpc *custodes.MPC,
 	dataset *EncryptedDataset,
 	debug bool) *TestResult {
 

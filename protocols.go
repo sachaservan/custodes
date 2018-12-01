@@ -1,10 +1,10 @@
-package hypocert
+package custodes
 
 // Constants
 import (
 	"crypto/rand"
+	"custodes/party"
 	"errors"
-	"hypocert/party"
 	"math"
 	"math/big"
 

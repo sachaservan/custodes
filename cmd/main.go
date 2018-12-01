@@ -1,9 +1,9 @@
 package main
 
 import (
+	"custodes"
 	"flag"
 	"fmt"
-	"hypocert"
 	"runtime"
 	"time"
 )
@@ -42,10 +42,10 @@ func main() {
 	runtime.GOMAXPROCS(2 * numParties)
 
 	// system parameters
-	var params *hypocert.MPCKeyGenParams
+	var params *custodes.MPCKeyGenParams
 
 	if !*example {
-		params = &hypocert.MPCKeyGenParams{
+		params = &custodes.MPCKeyGenParams{
 			NumParties:      numParties,
 			Threshold:       threshold,
 			KeyBits:         512,
@@ -55,7 +55,7 @@ func main() {
 			NetworkLatency:  networkLatency * time.Millisecond}
 	} else {
 		// params for example purposes
-		params = &hypocert.MPCKeyGenParams{
+		params = &custodes.MPCKeyGenParams{
 			NumParties:      3,
 			Threshold:       2,
 			KeyBits:         1024,
@@ -66,7 +66,7 @@ func main() {
 	}
 
 	fmt.Print("System setup in progress...")
-	mpc, err := hypocert.NewMPCKeyGen(params)
+	mpc, err := custodes.NewMPCKeyGen(params)
 	if err != nil {
 		panic(err)
 	}

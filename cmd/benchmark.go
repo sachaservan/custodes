@@ -1,10 +1,10 @@
 package main
 
 import (
+	"custodes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"hypocert"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -71,7 +71,7 @@ type TestReport struct {
 }
 
 func runChiSqBechmarks(
-	mpc *hypocert.MPC,
+	mpc *custodes.MPC,
 	filename string,
 	numParties int,
 	latency time.Duration,
@@ -126,7 +126,7 @@ func runChiSqBechmarks(
 }
 
 func runTTestBechmarks(
-	mpc *hypocert.MPC,
+	mpc *custodes.MPC,
 	filename string,
 	numParties int,
 	latency time.Duration,
@@ -187,7 +187,7 @@ func runTTestBechmarks(
 }
 
 func runPearsonsBechmarks(
-	mpc *hypocert.MPC,
+	mpc *custodes.MPC,
 	filename string,
 	numParties int,
 	latency time.Duration,
@@ -261,7 +261,7 @@ func (trans *MPCTranscript) addEntry(entry *MPCTranscriptEntry) {
 }
 
 func encryptCategoricalDataset(
-	mpc *hypocert.MPC,
+	mpc *custodes.MPC,
 	filepath string,
 	example bool) (*EncryptedDataset, time.Duration) {
 	dealerSetupStart := time.Now()
@@ -327,7 +327,7 @@ func encryptCategoricalDataset(
 }
 
 func encryptDataset(
-	mpc *hypocert.MPC,
+	mpc *custodes.MPC,
 	filepath string,
 	example bool) (*EncryptedDataset, time.Duration) {
 

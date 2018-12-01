@@ -1,8 +1,8 @@
-package hypocert
+package custodes
 
 import (
+	"custodes/party"
 	"errors"
-	"hypocert/party"
 	"math/big"
 	"sync"
 

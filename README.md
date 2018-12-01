@@ -1,20 +1,20 @@
-# HypoCert
+#Custodes
 ## A system for certifying hypothesis testing procedures. 
-See [hypocert.pdf](https://github.com/sachaservan/hypocert/blob/master/hypocert.pdf) for more details. 
+See [custodes.pdf](https://github.com/sachaservan/hypocert/blob/master/custodes.pdf) for more details. 
 
 #### Implementation
 
 Build the system:  
 ```
-cd go/src/hypocert/cmd
+cd go/src/custodes/cmd
 go get
 make
 ```
 Running examples:
 ```
 cd bin
-./hypocert -example
-./hypocert -parties <num_parties> -threshold <corruption-threhsold> -rootdir <path-to-project dir>
+./custodes -example
+./custodes -parties <num_parties> -threshold <corruption-threhsold> -rootdir <path-to-project dir>
 ```
 
 # License

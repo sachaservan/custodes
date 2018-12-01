@@ -1,16 +1,16 @@
 package main
 
 import (
+	"custodes"
+	"custodes/party"
 	"fmt"
-	"hypocert"
-	"hypocert/party"
 	"log"
 	"math/big"
 	"sync"
 	"time"
 )
 
-func ChiSquaredSecretSharingSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
+func ChiSquaredSecretSharingSimulation(mpc *custodes.MPC, filepath string, debug bool) (*big.Float, int, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -138,7 +138,7 @@ func ChiSquaredSecretSharingSimulation(mpc *hypocert.MPC, filepath string, debug
 	return chi2Stat, numRows, numCategories, dealerSetupTime, totalTime, paillierTime, divTime, mpc.DeleteAllShares()
 }
 
-func TTestSecretSharingSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
+func TTestSecretSharingSimulation(mpc *custodes.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
 
 	//**************************************************************************************
 	//**************************************************************************************
@@ -287,7 +287,7 @@ func TTestSecretSharingSimulation(mpc *hypocert.MPC, filepath string, debug bool
 }
 
 // Simulation of Pearson's coorelation coefficient
-func PearsonsTestSecretSharingSimulation(mpc *hypocert.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
+func PearsonsTestSecretSharingSimulation(mpc *custodes.MPC, filepath string, debug bool) (*big.Float, int, time.Duration, time.Duration, time.Duration, time.Duration, int) {
 
 	//**************************************************************************************
 	//**************************************************************************************

@@ -1,4 +1,4 @@
-package hypocert
+package custodes
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"sync"
 
-	"hypocert/party"
+	"custodes/party"
 )
 
 // set/propagate/kill wrapper used in the

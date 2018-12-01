@@ -1,9 +1,9 @@
 package main
 
 import (
+	"custodes"
+	"custodes/party"
 	"fmt"
-	"hypocert"
-	"hypocert/party"
 	"log"
 	"math/big"
 	"sync"
@@ -13,7 +13,7 @@ import (
 )
 
 func ChiSquaredTestSimulation(
-	mpc *hypocert.MPC,
+	mpc *custodes.MPC,
 	encD *EncryptedDataset,
 	debug bool) *TestResult {
 
