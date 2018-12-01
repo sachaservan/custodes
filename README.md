@@ -1,6 +1,6 @@
 # Custodes
 ## A system for certifying hypothesis testing procedures. 
-See [custodes.pdf](https://sachaservanschreiber.com/thesis.pdf) for more details. 
+See [custodes.pdf](http://sachaservanschreiber.com/thesis.pdf) for more details. 
 
 #### Implementation
 
