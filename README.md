@@ -2,6 +2,9 @@
 ## A system for certifying hypothesis testing procedures. 
 See [custodes.pdf](http://sachaservanschreiber.com/thesis.pdf) for more details. 
 
+## WARNING!! 
+This system is intended as a proof-of-concept only!! This is purely research code which has not been fully tested and vetted by security experts. Please be aware of the risks of using *any* portion of this code for production systems. 
+
 #### Implementation
 
 Build the system:  
